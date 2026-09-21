@@ -13,7 +13,7 @@ GPUI-RSX 是一个用于编写 GPUI 视图的过程宏。静态标记会在编�
 [dependencies]
 gpui = { git = "https://github.com/zed-industries/zed" }
 gpui_platform = { git = "https://github.com/zed-industries/zed", features = ["font-kit", "runtime_shaders", "wayland", "x11"] }
-gpui-rsx = "0.6"
+gpui-rsx = "0.7"
 ```
 
 应用项目应提交 `Cargo.lock`，以固定实际解析到的 GPUI git revision。
@@ -181,8 +181,16 @@ cargo check --manifest-path demo/Cargo.toml --bins --locked
 
 demo lockfile 会固定 GPUI 和 `gpui-component`，方便复现兼容性问题。
 
+可以直接运行完整的多面板示例：
+
+```bash
+cargo run --manifest-path demo/Cargo.toml --bin incident_console --locked
+```
+
 ## 下一步
 
 - 阅读[语法参考](/gpui-rsx/zh-cn/usage/syntax/)了解元素、属性、子节点和 Fragment。
 - 在依赖动态 class 前阅读 [Class 处理](/gpui-rsx/zh-cn/usage/class/)。
 - 在循环中渲染可交互行前阅读 [ID 与 Key](/gpui-rsx/zh-cn/usage/ids/)。
+- 阅读[事故响应控制台](/gpui-rsx/zh-cn/examples/incident-console/)查看模块化应用示例。
+- 对齐 GPUI、gpui-component、Rust 和 demo lockfile 时阅读 [兼容性](/gpui-rsx/zh-cn/compatibility/)。

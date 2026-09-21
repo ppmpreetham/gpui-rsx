@@ -66,14 +66,6 @@ pub(crate) fn parse_single_class_with_mode(class: &str, mode: ClassMode) -> Toke
         };
     }
 
-    if class == "text-ellipsis-start" {
-        return if mode.is_strict() {
-            compile_error(unsupported_class_message(class))
-        } else {
-            quote! {}
-        };
-    }
-
     if let Some(token) = parse_tailwind_alias_class(class) {
         return token;
     }
@@ -206,12 +198,10 @@ pub(crate) fn parse_single_class_with_mode(class: &str, mode: ClassMode) -> Toke
     {
         let ident = syn::Ident::new(&method_name, Span::call_site());
         quote! { .#ident() }
+    } else if mode.is_strict() {
+        compile_error(unsupported_class_message(class))
     } else {
-        if mode.is_strict() {
-            compile_error(unsupported_class_message(class))
-        } else {
-            quote! {}
-        }
+        quote! {}
     }
 }
 
@@ -610,4 +600,59 @@ fn unsupported_class_message(class: &str) -> String {
         "Unsupported class `{class}` in strict mode. Use `rsx!` or `rsx_permissive!` to keep \
          unsupported classes ignored, or replace this with a supported GPUI class or attribute."
     )
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn malformed_arbitrary_length_reports_compile_error() {
+        let tokens = parse_single_class_with_mode("w-[280px", ClassMode::Permissive).to_string();
+
+        assert!(tokens.contains("Invalid length class `w-[280px`"));
+        assert!(tokens.contains("compile_error"));
+    }
+
+    #[test]
+    fn fraction_parser_reports_each_malformed_component() {
+        let cases = [
+            (
+                "12",
+                "Invalid fraction `w-12`: expected numerator/denominator.",
+            ),
+            (
+                "many/2",
+                "Invalid fraction `w-many/2`: numerator must be a number.",
+            ),
+            (
+                "1/many",
+                "Invalid fraction `w-1/many`: denominator must be a number.",
+            ),
+        ];
+
+        for (value, expected) in cases {
+            let class = format!("w-{value}");
+            assert_eq!(
+                LengthKind::parse_fraction(&class, value).err().as_deref(),
+                Some(expected)
+            );
+        }
+    }
+
+    #[test]
+    fn fraction_spacing_reports_unsupported_family() {
+        let tokens = parse_single_class_with_mode("p-1/2", ClassMode::Permissive).to_string();
+
+        assert!(tokens.contains("fractions are only supported for sizing classes"));
+        assert!(tokens.contains("compile_error"));
+    }
+
+    #[test]
+    fn length_number_rejects_empty_and_non_finite_values() {
+        assert_eq!(parse_length_number(""), None);
+        assert_eq!(parse_length_number("NaN"), None);
+        assert_eq!(parse_length_number("inf"), None);
+        assert_eq!(parse_length_number("-inf"), None);
+    }
 }

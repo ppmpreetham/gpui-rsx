@@ -13,7 +13,7 @@ Add GPUI from the Zed repository and GPUI-RSX to your application:
 [dependencies]
 gpui = { git = "https://github.com/zed-industries/zed" }
 gpui_platform = { git = "https://github.com/zed-industries/zed", features = ["font-kit", "runtime_shaders", "wayland", "x11"] }
-gpui-rsx = "0.6"
+gpui-rsx = "0.7"
 ```
 
 Applications should commit `Cargo.lock` so the exact GPUI git revision is pinned.
@@ -181,8 +181,16 @@ cargo check --manifest-path demo/Cargo.toml --bins --locked
 
 The demo lockfile pins GPUI and `gpui-component` so compatibility problems are reproducible.
 
+Run the complete multi-pane example directly:
+
+```bash
+cargo run --manifest-path demo/Cargo.toml --bin incident_console --locked
+```
+
 ## Next Steps
 
 - Read [Syntax Reference](/gpui-rsx/usage/syntax/) for elements, attributes, children, and fragments.
 - Read [Class Handling](/gpui-rsx/usage/class/) before relying on dynamic class strings.
 - Read [IDs and Keys](/gpui-rsx/usage/ids/) before rendering interactive rows in loops.
+- Explore the [Incident Console](/gpui-rsx/examples/incident-console/) for a modular application example.
+- Read [Compatibility](/gpui-rsx/compatibility/) when aligning GPUI, gpui-component, Rust, and the demo lockfile.

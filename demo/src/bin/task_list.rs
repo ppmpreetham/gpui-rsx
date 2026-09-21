@@ -33,7 +33,7 @@ impl Default for TaskListView {
                 },
                 Task {
                     id: 3,
-                    title: "Add demos for 0.6",
+                    title: "Add demos for 0.7",
                     owner: "Docs",
                     done: false,
                 },
@@ -90,9 +90,10 @@ impl Render for TaskListView {
 
 fn main() {
     application().run(|cx: &mut App| {
-        let _ = cx.open_window(WindowOptions::default(), |_, cx| {
+        cx.open_window(WindowOptions::default(), |_, cx| {
             cx.new(|_| TaskListView::default())
-        });
+        })
+        .expect("failed to open task list window");
         cx.activate(true);
     });
 }
