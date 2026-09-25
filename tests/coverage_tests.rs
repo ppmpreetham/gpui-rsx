@@ -5,7 +5,7 @@
 mod common;
 
 use common::*;
-use gpui_rsx::rsx;
+use zopra_gpui_view::rsx;
 
 // ===========================================================================
 // Class 解析边界情况

@@ -240,7 +240,7 @@ impl Styled for StyleRefinement {
         border_color,
         opacity,
         text_size,
-        object_fit,
+
     );
 
     fn line_clamp(self, _: usize) -> Self {
@@ -591,7 +591,7 @@ impl MockElement {
     mock_no_arg_methods!(debug);
     mock_value_methods!(
         path,
-        object_fit,
+
         with_fallback,
         with_loading,
         image_cache,
@@ -806,7 +806,7 @@ impl Styled for MockElement {
         border_color,
         opacity,
         text_size,
-        object_fit,
+
     );
 
     fn line_clamp(self, lines: usize) -> Self {

@@ -875,12 +875,6 @@ pub(crate) const COMMON_CLASS_SUPPORT: &[CommonClassSupport] = &[
     CommonClassSupport::dynamic_only("font-bold"),
     CommonClassSupport::dynamic_only("font-extrabold"),
     CommonClassSupport::dynamic_only("font-black"),
-    // Object fit
-    CommonClassSupport::dynamic_only("object-cover"),
-    CommonClassSupport::dynamic_only("object-contain"),
-    CommonClassSupport::dynamic_only("object-fill"),
-    CommonClassSupport::dynamic_only("object-scale-down"),
-    CommonClassSupport::dynamic_only("object-none"),
     // Border
     CommonClassSupport::both("border"),
     CommonClassSupport::both("border-2"),

@@ -3,6 +3,10 @@
 #[derive(Debug)]
 pub struct MockElement;
 
+impl MockElement {
+    pub fn object_fit<T>(self, _v: T) -> Self { self }
+}
+
 #[derive(Debug)]
 pub struct AnyElement;
 
@@ -269,7 +273,6 @@ pub trait Styled: Sized {
     fn rounded_r_lg(self) -> Self;
     fn rounded_l_lg(self) -> Self;
     // --- misc ---
-    fn object_fit<T>(self, v: T) -> Self;
     fn cursor_pointer(self) -> Self;
     fn overflow_hidden(self) -> Self;
     fn overflow_x_hidden(self) -> Self;
