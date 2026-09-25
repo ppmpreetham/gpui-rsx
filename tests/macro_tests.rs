@@ -3021,3 +3021,12 @@ fn test_rsx_expand_preview_expands_multi_arg_interactive_attrs() {
     assert!(compact.contains(".on_a11y_action(AccessibleAction::Click,handler)"));
     assert!(compact.contains(".on_aux_click(aux)"));
 }
+
+#[test]
+fn test_object_fit_classes() {
+    let _a = rsx! { <img src="test" class="object-cover" /> };
+    let _b = rsx! { <img src="test" class="object-contain" /> };
+    let _c = rsx! { <img src="test" class="object-fill" /> };
+    let _d = rsx! { <img src="test" class="object-scale-down" /> };
+    let _e = rsx! { <img src="test" class="object-none" /> };
+}

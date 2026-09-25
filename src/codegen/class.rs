@@ -51,6 +51,10 @@ pub(crate) fn parse_single_class_with_mode(class: &str, mode: ClassMode) -> Toke
         return token;
     }
 
+    if let Some(token) = parse_object_fit_class(class) {
+        return token;
+    }
+
     if class == "debug-outline" {
         return quote! {
             .map(|__el| {
@@ -248,6 +252,19 @@ fn parse_font_weight_class(class: &str, mode: ClassMode) -> Option<TokenStream> 
     };
     let weight_ident = syn::Ident::new(weight, Span::call_site());
     Some(quote! { .font_weight(FontWeight::#weight_ident) })
+}
+
+fn parse_object_fit_class(class: &str) -> Option<TokenStream> {
+    let fit = match class {
+        "object-cover" => "Cover",
+        "object-contain" => "Contain",
+        "object-fill" => "Fill",
+        "object-scale-down" => "ScaleDown",
+        "object-none" => "None",
+        _ => return None,
+    };
+    let fit_ident = syn::Ident::new(fit, Span::call_site());
+    Some(quote! { .object_fit(ObjectFit::#fit_ident) })
 }
 
 #[derive(Clone, Copy)]
