@@ -100,6 +100,7 @@ fn analyze_attr(attr: &RsxAttribute) -> AttrAnalysis {
 use crate::parser::{RsxAttribute, RsxBody, RsxElement, RsxElementName, RsxNode};
 use proc_macro2::TokenStream;
 use quote::{ToTokens, quote};
+use syn::spanned::Spanned;
 
 type CodegenResult = Result<TokenStream, TokenStream>;
 
@@ -196,7 +197,34 @@ fn generate_element_checked(
 
     // 快速路径：无属性且无子节点时，跳过所有扫描直接返回基础标签
     if element.attributes.is_empty() && element.children.is_empty() {
+        if tag_str.chars().next().is_some_and(|c| c.is_ascii_uppercase()) {
+            return generate_component_call(&element.name, &[], &[], &[]);
+        }
         return generate_tag(&tag_str, &element.name, None, None, None);
+    }
+
+    let has_base = element
+        .attributes
+        .iter()
+        .any(|attr| matches!(attr, RsxAttribute::Value { name, .. } if name == "base"));
+    if tag_str.chars().next().is_some_and(|c| c.is_ascii_uppercase()) && !has_base {
+        let attr_pairs: Vec<(&syn::Ident, &syn::Expr)> = element
+            .attributes
+            .iter()
+            .filter_map(|attr| match attr {
+                RsxAttribute::Value { name, value } => Some((name, value)),
+                _ => None,
+            })
+            .collect();
+        let flags: Vec<&syn::Ident> = element
+            .attributes
+            .iter()
+            .filter_map(|attr| match attr {
+                RsxAttribute::Flag(name) => Some(name),
+                _ => None,
+            })
+            .collect();
+        return generate_component_call(&element.name, &attr_pairs, &flags, &element.children);
     }
 
     // 单次遍历提取所有需要的信息，同时生成用户属性方法。
@@ -348,6 +376,72 @@ fn generate_children_methods(
 /// HTML 标签 → `div()`，特殊标签 → 同名函数，自定义组件 → 同名函数调用
 ///
 /// 接受预缓存的 `tag_str` 避免重复 `to_string()`
+fn generate_component_call(
+    name: &RsxElementName,
+    attrs: &[(&syn::Ident, &syn::Expr)],
+    flags: &[&syn::Ident],
+    children: &[RsxNode],
+) -> CodegenResult {
+    if name.as_single_ident().is_none() {
+        return Err(syn::Error::new(
+            name.span(),
+            "component tags with paths (e.g. `<ui::TaskCard />`) are not supported yet; use a single-identifier tag",
+        )
+        .to_compile_error());
+    }
+
+    let props_ident = {
+        let ident = name.as_single_ident().unwrap();
+        let mut s = ident.to_string();
+        s.push_str("Props");
+        proc_macro2::Ident::new(&s, ident.span())
+    };
+
+    let mut setters = TokenStream::new();
+    for (attr_name, expr) in attrs {
+        setters.extend(quote! { .#attr_name(#expr) });
+    }
+    for flag in flags {
+        setters.extend(quote! { .#flag() });
+    }
+
+    let children_setter = if children.is_empty() {
+        TokenStream::new()
+    } else {
+        let child_exprs: Vec<TokenStream> = children
+            .iter()
+            .map(|node| match node {
+                RsxNode::Element(elem) => generate_element_checked(elem, false, ClassMode::Permissive),
+                RsxNode::Expr(expr) => Ok(quote! { #expr }),
+                RsxNode::Spread(expr) => Err(syn::Error::new(
+                    expr.span(),
+                    "spread syntax is not supported in component children",
+                )
+                .to_compile_error()),
+                RsxNode::For { .. } => Err(syn::Error::new(
+                    name.span(),
+                    "for-loop children are not supported in component tags yet",
+                )
+                .to_compile_error()),
+            })
+            .collect::<Result<Vec<_>, _>>()?;
+        quote! { .children(vec![#(#child_exprs),*]) }
+    };
+
+    let loc = name.span().start();
+    let (line, column) = (loc.line as u64, loc.column as u64);
+    Ok(quote! {
+        #props_ident::new() #setters #children_setter .render_at(
+            gpui_kit::ElementId::NamedInteger(
+                concat!(file!(), "::__zopra_tag_").into(),
+                #line * 10_000 + #column,
+            ),
+            window,
+            cx,
+        )
+    })
+}
+
 fn generate_tag(
     tag_str: &str,
     name: &RsxElementName,

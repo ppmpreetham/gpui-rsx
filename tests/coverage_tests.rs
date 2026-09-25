@@ -456,6 +456,7 @@ fn test_for_loop_multiple_body_nodes() {
 fn test_for_loop_multiple_body_nodes_mixed_types() {
     // 多子节点循环体允许混合不同具体元素类型，靠 AnyElement 统一输出类型。
     let items = ["a", "b", "c"];
+    let (window, cx) = ((), ());
     let _el = rsx! {
         <ul>
             {for item in items {

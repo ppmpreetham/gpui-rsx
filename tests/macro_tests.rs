@@ -169,16 +169,19 @@ fn test_list_tags() {
 
 #[test]
 fn test_custom_component_self_closing() {
+    let (window, cx) = ((), ());
     let _el = rsx! { <MyComponent /> };
 }
 
 #[test]
 fn test_custom_component_with_children() {
+    let (window, cx) = ((), ());
     let _el = rsx! { <CustomWidget>{"content"}</CustomWidget> };
 }
 
 #[test]
 fn test_custom_component_with_attrs() {
+    let (window, cx) = ((), ());
     let _el = rsx! { <MyComponent flex bg={rgb(0xff0000)} /> };
 }
 

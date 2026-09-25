@@ -346,14 +346,41 @@ pub fn auto() -> f32 {
     0.0
 }
 
-// 模拟自定义组件构造函数
 #[allow(non_snake_case, dead_code)]
-pub fn MyComponent() -> MockElement {
-    MockElement
+pub struct MyComponentProps;
+#[allow(non_snake_case, dead_code)]
+impl MyComponentProps {
+    #[allow(clippy::new_without_default)]
+    pub fn new() -> Self {
+        Self
+    }
+    pub fn render_at<W, C>(self, _site: gpui_kit::ElementId, _window: W, _cx: C) -> MockElement {
+        MockElement
+    }
+    pub fn children(self, _: Vec<impl Sized>) -> Self {
+        self
+    }
+    pub fn bg(self, _: impl Sized) -> Self {
+        self
+    }
+    pub fn flex(self) -> Self {
+        self
+    }
 }
 #[allow(non_snake_case, dead_code)]
-pub fn CustomWidget() -> MockElement {
-    MockElement
+pub struct CustomWidgetProps;
+#[allow(non_snake_case, dead_code)]
+impl CustomWidgetProps {
+    #[allow(clippy::new_without_default)]
+    pub fn new() -> Self {
+        Self
+    }
+    pub fn render_at<W, C>(self, _site: gpui_kit::ElementId, _window: W, _cx: C) -> MockElement {
+        MockElement
+    }
+    pub fn children(self, _: Vec<impl Sized>) -> Self {
+        self
+    }
 }
 
 #[allow(dead_code)]

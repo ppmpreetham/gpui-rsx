@@ -31,6 +31,8 @@ proc-macro2 = { version = "1.0.106", features = ["span-locations"] }
 [dev-dependencies]
 criterion = { version = "0.8.2", features = ["html_reports"] }
 trybuild = "1.0.116"
+# for the zopra-style component-tag mock expansion (render_at(window, cx))
+gpui-kit = "0.6"
 
 [[bench]]
 name = "class_performance"
