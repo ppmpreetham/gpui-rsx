@@ -1,4 +1,4 @@
-use gpui_rsx::rsx_expand;
+use zopra_gpui_view::rsx_expand;
 
 fn main() {
     let s = rsx_expand! {

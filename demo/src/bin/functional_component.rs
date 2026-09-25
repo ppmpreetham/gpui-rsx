@@ -1,8 +1,8 @@
 use gpui::prelude::*;
 use gpui::*;
-use gpui_rsx::{component, rsx};
+use zopra_gpui_view::{component, rsx};
 
-use gpui_rsx_demo::button::FunctionalButton;
+use zopra_gpui_view_demo::button::FunctionalButton;
 
 struct AppView {
     focus_handle: FocusHandle,

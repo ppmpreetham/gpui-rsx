@@ -4,7 +4,7 @@
 //!
 //! 运行：`cargo bench`
 
-use gpui_rsx::rsx;
+use zopra_gpui_view::rsx;
 use std::hint::black_box;
 
 use criterion::{BenchmarkId, Criterion, criterion_group, criterion_main};

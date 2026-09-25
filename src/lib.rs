@@ -10,7 +10,7 @@
 //! ```ignore
 //! use gpui::*;
 //! use gpui::prelude::*;
-//! use gpui_rsx::rsx;
+//! use zopra_gpui_view::rsx;
 //!
 //! // Before — verbose GPUI method chain
 //! div()
