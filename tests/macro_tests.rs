@@ -480,6 +480,12 @@ fn test_class_text_sizes() {
     let _b = rsx! { <div class="text-xl" /> };
     let _c = rsx! { <div class="text-2xl" /> };
     let _d = rsx! { <div class="text-3xl" /> };
+    let _e = rsx! { <div class="text-4xl" /> };
+    let _f = rsx! { <div class="text-5xl" /> };
+    let _g = rsx! { <div class="text-6xl" /> };
+    let _h = rsx! { <div class="text-7xl" /> };
+    let _i = rsx! { <div class="text-8xl" /> };
+    let _j = rsx! { <div class="text-9xl" /> };
 }
 
 // ===========================================================================

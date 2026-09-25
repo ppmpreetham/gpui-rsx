@@ -838,6 +838,12 @@ pub(crate) const COMMON_CLASS_SUPPORT: &[CommonClassSupport] = &[
     CommonClassSupport::both("text-xl"),
     CommonClassSupport::both("text-2xl"),
     CommonClassSupport::both("text-3xl"),
+    CommonClassSupport::both("text-4xl"),
+    CommonClassSupport::both("text-5xl"),
+    CommonClassSupport::both("text-6xl"),
+    CommonClassSupport::both("text-7xl"),
+    CommonClassSupport::both("text-8xl"),
+    CommonClassSupport::both("text-9xl"),
     CommonClassSupport::both("text-left"),
     CommonClassSupport::both("text-center"),
     CommonClassSupport::both("text-right"),
@@ -997,7 +1003,7 @@ pub(crate) fn dynamic_common_classes() -> impl Iterator<Item = &'static str> {
 ///
 /// 使用 match 替代原 VALID_TEXT_SIZES 数组的 `.contains()` 线性扫描。
 pub(crate) fn is_valid_text_size(size: &str) -> bool {
-    matches!(size, "xs" | "sm" | "base" | "lg" | "xl" | "2xl" | "3xl")
+    matches!(size, "xs" | "sm" | "base" | "lg" | "xl" | "2xl" | "3xl" | "4xl" | "5xl" | "6xl" | "7xl" | "8xl" | "9xl")
 }
 
 /// 查找标签默认样式（仅当元素带 `styled` 标志时使用）
@@ -1431,7 +1437,7 @@ mod tests {
 
     #[test]
     fn text_size_validates_known_sizes() {
-        for size in ["xs", "sm", "base", "lg", "xl", "2xl", "3xl"] {
+        for size in ["xs", "sm", "base", "lg", "xl", "2xl", "3xl", "4xl", "5xl", "6xl", "7xl", "8xl", "9xl"] {
             assert!(is_valid_text_size(size), "应接受文本大小: {size}");
         }
     }
@@ -1439,9 +1445,7 @@ mod tests {
     #[test]
     fn text_size_rejects_unknown() {
         assert!(!is_valid_text_size("huge"));
-        assert!(!is_valid_text_size("4xl"));
-        assert!(!is_valid_text_size("5xl"));
-        assert!(!is_valid_text_size("6xl"));
+        assert!(!is_valid_text_size("10xl"));
         assert!(!is_valid_text_size(""));
     }
 }

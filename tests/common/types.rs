@@ -202,6 +202,7 @@ pub trait Styled: Sized {
     fn text_xl(self) -> Self;
     fn text_2xl(self) -> Self;
     fn text_3xl(self) -> Self;
+    fn text_size<T>(self, size: T) -> Self;
     // --- text alignment ---
     fn text_left(self) -> Self;
     fn text_center(self) -> Self;

@@ -157,8 +157,18 @@ pub(crate) fn parse_single_class_with_mode(class: &str, mode: ClassMode) -> Toke
         }
         // 再查文本大小（text-xl → .text_xl()）
         if is_valid_text_size(rest) {
-            let size_ident = syn::Ident::new(&method_name, Span::call_site());
-            return quote! { .#size_ident() };
+            match rest {
+                "4xl" => return quote! { .text_size(rems(2.25)) },
+                "5xl" => return quote! { .text_size(rems(3.0)) },
+                "6xl" => return quote! { .text_size(rems(3.75)) },
+                "7xl" => return quote! { .text_size(rems(4.5)) },
+                "8xl" => return quote! { .text_size(rems(6.0)) },
+                "9xl" => return quote! { .text_size(rems(8.0)) },
+                _ => {
+                    let size_ident = syn::Ident::new(&method_name, Span::call_site());
+                    return quote! { .#size_ident() };
+                }
+            }
         }
         // 不在白名单中的 text_ 前缀，fall through 到默认处理
     }
