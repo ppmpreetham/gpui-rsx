@@ -231,6 +231,7 @@ fn generate_element_checked(
     let mut user_id = None;
     let mut user_key = None;
     let mut base_expr = None;
+    let mut input_state = None;
     let mut img_source = None;
     let mut canvas_prepaint = None;
     let mut canvas_paint = None;
@@ -254,6 +255,11 @@ fn generate_element_checked(
             }
             RsxAttribute::Value { name, value } if name == "base" => {
                 base_expr = Some(value);
+            }
+            RsxAttribute::Value { name, value }
+                if (tag_str == "input" || tag_str == "textarea") && name == "state" =>
+            {
+                input_state = Some(value);
             }
             RsxAttribute::Value { name, value }
                 if tag_str == "img" && (name == "src" || name == "source") =>
@@ -304,6 +310,12 @@ fn generate_element_checked(
     //  4. 不需要 id            → 不注入（key 在此情况下静默忽略）
     let tag = if let Some(base) = base_expr {
         quote! { #base }
+    } else if let Some(state) = input_state {
+        if tag_str == "input" {
+            quote! { gpui_kit::component::input::Input::new(#state) }
+        } else {
+            quote! { gpui_kit::component::input::Textarea::new(#state) }
+        }
     } else {
         generate_tag(
             &tag_str,
@@ -494,7 +506,7 @@ fn generate_tag(
         // HTML 标签：统一映射为 div()
         "div" | "span" | "section" | "article" | "header" | "footer" | "main" | "nav" | "aside"
         | "h1" | "h2" | "h3" | "h4" | "h5" | "h6" | "p" | "label" | "a" | "button" | "input"
-        | "textarea" | "select" | "form" | "ul" | "ol" | "li" | "Activity" => {
+        | "textarea" | "select" | "form" | "ul" | "ol" | "li" | "kbd" | "Activity" => {
             quote! { div() }
         }
         _ => quote! { #path() },

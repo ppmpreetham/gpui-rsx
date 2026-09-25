@@ -1027,6 +1027,7 @@ pub(crate) fn lookup_tag_default(tag: &str) -> Option<&'static str> {
         "a" => Some("cursor-pointer"),
         "input" => Some("px-2 py-1"),
         "textarea" => Some("px-2 py-1"),
+        "kbd" => Some("font-mono text-sm px-1.5 py-0.5 rounded border border-gray-300 bg-gray-100"),
         "ul" => Some("flex flex-col"),
         "ol" => Some("flex flex-col"),
         "li" => Some("flex items-center"),
