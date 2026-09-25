@@ -47,6 +47,23 @@ pub(crate) fn parse_class_string_with_mode(
 
 /// Parses a single CSS class into a method call
 pub(crate) fn parse_single_class_with_mode(class: &str, mode: ClassMode) -> TokenStream {
+    if let Some(rest) = class.strip_prefix("hover:") {
+        let inner = parse_single_class_with_mode(rest, mode);
+        return quote! { .hover(|style| style #inner) };
+    }
+    if let Some(rest) = class.strip_prefix("active:") {
+        let inner = parse_single_class_with_mode(rest, mode);
+        return quote! { .active(|style| style #inner) };
+    }
+    if let Some(rest) = class.strip_prefix("focus:") {
+        let inner = parse_single_class_with_mode(rest, mode);
+        return quote! { .focus(|style| style #inner) };
+    }
+    if let Some(rest) = class.strip_prefix("group-hover:") {
+        let inner = parse_single_class_with_mode(rest, mode);
+        return quote! { .group_hover(|style| style #inner) };
+    }
+
     if let Some(token) = parse_font_weight_class(class, mode) {
         return token;
     }

@@ -45,6 +45,10 @@ impl Styled for StyleRefinement {
     fn style(&mut self) -> &mut StyleRefinement {
         self
     }
+    fn hover(self, f: impl FnOnce(Self) -> Self) -> Self { f(self) }
+    fn active(self, f: impl FnOnce(Self) -> Self) -> Self { f(self) }
+    fn focus(self, f: impl FnOnce(Self) -> Self) -> Self { f(self) }
+    fn group_hover(self, _: &str, f: impl FnOnce(Self) -> Self) -> Self { f(self) }
 
     styled_no_arg_methods!(
         flex,
@@ -909,4 +913,8 @@ impl Styled for MockElement {
         INTEGER_CALLS.with(|c| c.borrow_mut().push(("row_end", v as i32)));
         self
     }
+    fn hover(self, f: impl FnOnce(Self) -> Self) -> Self { f(self) }
+    fn active(self, f: impl FnOnce(Self) -> Self) -> Self { f(self) }
+    fn focus(self, f: impl FnOnce(Self) -> Self) -> Self { f(self) }
+    fn group_hover(self, _: &str, f: impl FnOnce(Self) -> Self) -> Self { f(self) }
 }

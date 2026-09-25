@@ -166,6 +166,19 @@ fn generate_dynamic_class_helper(mode: ClassMode) -> TokenStream {
         // - LLVM ICF can merge monomorphized instances of the same type
         #[inline(never)]
         fn __rsx_apply_class<E: Styled>(el: E, class: &str) -> E {
+            if let Some(rest) = class.strip_prefix("hover:") {
+                return el.hover(|style| __rsx_apply_class(style, rest));
+            }
+            if let Some(rest) = class.strip_prefix("active:") {
+                return el.active(|style| __rsx_apply_class(style, rest));
+            }
+            if let Some(rest) = class.strip_prefix("focus:") {
+                return el.focus(|style| __rsx_apply_class(style, rest));
+            }
+            if let Some(rest) = class.strip_prefix("group-hover:") {
+                return el.group_hover("", |style| __rsx_apply_class(style, rest));
+            }
+
             match class {
                 #(#common_classes)*
                 _ => {

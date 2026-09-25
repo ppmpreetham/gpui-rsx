@@ -144,6 +144,12 @@ pub trait Styled: Sized {
     // --- alignment ---
     fn items_center(self) -> Self;
     fn items_start(self) -> Self;
+
+    // --- modifiers ---
+    fn hover(self, f: impl FnOnce(Self) -> Self) -> Self;
+    fn active(self, f: impl FnOnce(Self) -> Self) -> Self;
+    fn focus(self, f: impl FnOnce(Self) -> Self) -> Self;
+    fn group_hover(self, group: &str, f: impl FnOnce(Self) -> Self) -> Self;
     fn items_end(self) -> Self;
     fn items_baseline(self) -> Self;
     fn items_stretch(self) -> Self;
