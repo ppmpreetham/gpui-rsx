@@ -1,18 +1,18 @@
-//! 元素代码生成
+//! Element code generation
 //!
-//! 将 RSX 元素转换为 GPUI 方法链代码：
-//! - 基础标签构造
-//! - 自动 ID 管理（支持 `key` 属性组合 ID）
-//! - 子节点聚合优化
-//! - Fragment 和 For 循环支持（for 循环中的 stateful 元素须提供 `id` 或 `key`）
+//! Converts RSX elements into GPUI method-chaining code:
+//! - Base tag construction
+//! - Automatic ID management (supports combining IDs with the `key` attribute)
+//! - Child node aggregation optimization
+//! - Fragment and For-loop support (stateful elements in a for loop must provide `id` or `key`)
 //!
-//! 优化：
-//! - 缓存 `Ident::to_string()` 避免重复堆分配
-//! - 使用 match-based `is_stateful_attr()` 替代双重线性扫描
-//! - 使用 `lookup_tag_default()` 替代 `.iter().find()` 线性查找
-//! - `generate_attr_methods` 直接 push 到调用方 Vec
-//! - 每个子节点独立生成 `.child()` 调用，避免数组类型统一约束
-//! - 自动 ID 基于源码 span 位置（行号 + 列号），增量编译下保持稳定
+//! Optimizations:
+//! - Cache `Ident::to_string()` to avoid redundant heap allocations
+//! - Use match-based `is_stateful_attr()` instead of double linear scanning
+//! - Use `lookup_tag_default()` instead of linear search with `.iter().find()`
+//! - `generate_attr_methods` pushes directly to the caller's Vec
+//! - Each child node independently generates a `.child()` call, avoiding uniform array type constraints
+//! - Automatic IDs are based on source code span positions (line + column), remaining stable under incremental compilation
 
 use super::attribute::{AttrHints, generate_attr_methods_with_mode, static_class_expr_needs_id};
 use super::class::{ClassMode, parse_class_string_with_mode};
@@ -104,13 +104,13 @@ use syn::spanned::Spanned;
 
 type CodegenResult = Result<TokenStream, TokenStream>;
 
-/// 生成 GPUI 代码（入口）
+/// Generates GPUI code (entry point).
 ///
-/// 将解析后的 RSX AST 转换为 GPUI 的类型安全代码。
+/// Converts the parsed RSX AST into type-safe GPUI code.
 ///
-/// # 返回值
-/// - 单个元素：返回实现 `IntoElement` 的表达式
-/// - Fragment：返回 `Vec<impl IntoElement>`
+/// # Returns
+/// - Single element: returns an expression implementing `IntoElement`
+/// - Fragment: returns `Vec<impl IntoElement>`
 pub fn generate_body_with_mode(body: &RsxBody, mode: ClassMode) -> TokenStream {
     generate_body_checked(body, mode).unwrap_or_else(|err| err)
 }
@@ -127,19 +127,19 @@ fn generate_body_checked(body: &RsxBody, mode: ClassMode) -> CodegenResult {
                 .iter()
                 .map(|node| generate_node_checked(node, false, mode))
                 .collect::<Result<_, _>>()?;
-            // Fragment 保持 vec![] —— 返回类型是用户可见 API
+            // Fragments retain vec![] — the return type is user-facing API
             Ok(quote! { vec![#(#child_exprs),*] })
         }
     }
 }
 
-/// 生成单个子节点的代码
+/// Generates code for a single child node.
 ///
-/// 确保生成的代码具有正确的类型推断，支持 IntoElement trait
+/// Ensures generated code has proper type inference and supports the IntoElement trait.
 fn generate_node_checked(node: &RsxNode, require_loop_key: bool, mode: ClassMode) -> CodegenResult {
     match node {
         RsxNode::Element(elem) => generate_element_checked(elem, require_loop_key, mode),
-        // 表达式会被自动推断类型，GPUI 的 .child() 接受 impl IntoElement
+        // Expressions are automatically type-inferred; GPUI's .child() accepts impl IntoElement
         RsxNode::Expr(expr) => Ok(expr.to_token_stream()),
         RsxNode::Spread(expr) => Ok(expr.to_token_stream()),
         RsxNode::For {
@@ -150,15 +150,17 @@ fn generate_node_checked(node: &RsxNode, require_loop_key: bool, mode: ClassMode
     }
 }
 
-/// 生成 for 循环的迭代器代码
+/// Generates iterator code for for-loops.
 ///
-/// 单个子节点 → `.map()`，多个子节点 → `.flat_map()` + `AnyElement` 数组
+/// Single child node → `.map()`, multiple child nodes → `.flat_map()` + `AnyElement` array.
 ///
-/// 多子节点使用 `AnyElement` 做类型擦除后放入数组，避免每轮循环分配 `Vec`，
-/// 同时允许循环体内混合不同具体元素类型（如 `div()` 和自定义组件）。
+/// Multiple child nodes use `AnyElement` for type erasure before being placed in an array,
+/// avoiding `Vec` allocations on each loop iteration while allowing mixed concrete element
+/// types within the loop body (such as `div()` and custom components).
 ///
-/// 安全检查：循环体内所有 stateful 元素（含深层嵌套）都必须提供 `id` 或 `key`，
-/// 否则每次迭代会生成相同的自动 ID，导致 GPUI 状态冲突，因此在此阶段给出编译错误。
+/// Safety check: all stateful elements in the loop body (including deeply nested ones)
+/// must provide `id` or `key`; otherwise, each iteration would generate the same automatic ID,
+/// leading to GPUI state collisions. Therefore, a compile error is emitted at this stage.
 fn generate_for_loop_checked(
     binding: &syn::Pat,
     iter: &syn::Expr,
@@ -179,23 +181,23 @@ fn generate_for_loop_checked(
     }
 }
 
-/// 生成单个元素的代码
+/// Generates code for a single element.
 ///
-/// 生成形如 `div().id("x").flex().child(...)` 的方法链，
-/// 而非 `let mut element = div(); element = element.flex();` 的赋值模式。
+/// Generates a method chain such as `div().id("x").flex().child(...)`,
+/// rather than an assignment pattern like `let mut element = div(); element = element.flex();`.
 ///
-/// 方法链模式的优势：
-/// - 与 GPUI 惯用写法一致
-/// - 正确处理 `Div` → `Stateful<Div>` 的类型变换（`.id()` 后类型改变）
+/// Advantages of the method-chaining pattern:
+/// - Consistent with GPUI idiomatic usage
+/// - Correctly handles the `Div` → `Stateful<Div>` type transition (type changes after `.id()`)
 fn generate_element_checked(
     element: &RsxElement,
     require_loop_key: bool,
     mode: ClassMode,
 ) -> CodegenResult {
-    // 缓存标签名字符串，避免多次 to_string() 堆分配
+    // Cache tag name string to avoid multiple to_string() heap allocations
     let tag_str = element.name.to_string();
 
-    // 快速路径：无属性且无子节点时，跳过所有扫描直接返回基础标签
+    // Fast path: when there are no attributes and no children, skip all scans and return the base tag directly
     if element.attributes.is_empty() && element.children.is_empty() {
         if tag_str.chars().next().is_some_and(|c| c.is_ascii_uppercase()) {
             return generate_component_call(&element.name, &[], &[], &[]);
@@ -227,7 +229,7 @@ fn generate_element_checked(
         return generate_component_call(&element.name, &attr_pairs, &flags, &element.children);
     }
 
-    // 单次遍历提取所有需要的信息，同时生成用户属性方法。
+    // Single pass to extract all needed information while generating user attribute methods.
     let mut user_id = None;
     let mut user_key = None;
     let mut base_expr = None;
@@ -239,9 +241,9 @@ fn generate_element_checked(
     let is_component = tag_str.chars().next().map_or(false, |c| c.is_ascii_uppercase());
     let mut needs_id = false;
 
-    // 预分配方法链容量：
-    // - 每个属性乘以 2（class 属性平均展开 3-4 个方法，其余属性 1 个）
-    // - 加上子节点数
+    // Pre-allocate method chain capacity:
+    // - Multiply each attribute by 2 (class attribute expands to 3-4 methods on average, other attributes to 1)
+    // - Plus the number of children
     let mut methods: Vec<TokenStream> =
         Vec::with_capacity(element.attributes.len() * 2 + element.children.len());
 
@@ -303,11 +305,11 @@ fn generate_element_checked(
         return Err(for_loop_missing_key_error(&element.name.path, &tag_str).to_compile_error());
     }
 
-    // 生成基础元素和 id：
-    //  1. 显式 id              → 直接使用，优先级最高
-    //  2. 需要 id + key 存在   → 自动 ID 前缀 + key（运行时拼接，保证循环内唯一）
-    //  3. 需要 id，无 key       → 纯源码位置的自动 ID
-    //  4. 不需要 id            → 不注入（key 在此情况下静默忽略）
+    // Generate base element and id:
+    //  1. Explicit id              → Use directly, highest priority
+    //  2. Needs id + key exists    → Auto-ID prefix + key (concatenated at runtime, ensures uniqueness in loops)
+    //  3. Needs id, no key         → Auto-ID based purely on source location
+    //  4. Does not need id         → Do not inject (key is silently ignored in this case)
     let tag = if let Some(base) = base_expr {
         quote! { #base }
     } else if let Some(state) = input_state {
@@ -339,7 +341,7 @@ fn generate_element_checked(
         tag
     };
 
-    // styled 标志 → 注入标签默认样式（在用户属性之前）
+    // styled flag → inject tag default styles (before user attributes)
     let default_methods: Vec<TokenStream> =
         if has_styled && let Some(class_str) = lookup_tag_default(&tag_str) {
             parse_class_string_with_mode(class_str, mode).collect()
@@ -347,13 +349,13 @@ fn generate_element_checked(
             Vec::new()
         };
 
-    // 子节点 → .child() / .children() 调用（含聚合优化）
+    // Child nodes → .child() / .children() calls (including aggregation optimization)
     generate_children_methods(&element.children, require_loop_key, &mut methods, mode)?;
 
     Ok(quote! { #base #(#default_methods)* #(#methods)* })
 }
 
-/// 生成子节点的方法链片段
+/// Generates method-chaining fragments for child nodes.
 fn generate_children_methods(
     children: &[RsxNode],
     require_loop_key: bool,
@@ -385,9 +387,9 @@ fn generate_children_methods(
     Ok(())
 }
 
-/// HTML 标签 → `div()`，特殊标签 → 同名函数，自定义组件 → 同名函数调用
+/// HTML tag → `div()`, special tag → function of the same name, custom component → function call of the same name
 ///
-/// 接受预缓存的 `tag_str` 避免重复 `to_string()`
+/// Accepts pre-cached `tag_str` to avoid repeated `to_string()` calls
 fn generate_component_call(
     name: &RsxElementName,
     attrs: &[(&syn::Ident, &syn::Expr)],
@@ -468,7 +470,7 @@ fn generate_tag(
 
     let path = &name.path;
     Ok(match tag_str {
-        // 特殊标签：保留为同名函数调用
+        // Special tags: kept as function calls with the same name
         "svg" => quote! { svg() },
         "img" => {
             let Some(source) = img_source else {
@@ -503,7 +505,7 @@ fn generate_tag(
             };
             quote! { canvas(#prepaint, #paint) }
         }
-        // HTML 标签：统一映射为 div()
+        // HTML tags: uniformly mapped to div()
         "div" | "span" | "section" | "article" | "header" | "footer" | "main" | "nav" | "aside"
         | "h1" | "h2" | "h3" | "h4" | "h5" | "h6" | "p" | "label" | "a" | "button" | "input"
         | "textarea" | "select" | "form" | "ul" | "ol" | "li" | "kbd" | "Activity" => {
@@ -513,40 +515,40 @@ fn generate_tag(
     })
 }
 
-/// 生成基于源码位置的稳定自动 ID（无 key）
+/// Generates a stable automatic ID based on source location (without key).
 ///
-/// 格式：`concat!(file!(), "::", "__rsx_{tag}_L{line}C{col}")`
+/// Format: `concat!(file!(), "::", "__rsx_{tag}_L{line}C{col}")`
 ///
-/// **稳定性**：只要元素源码位置不变，ID 不变（增量编译安全）。
-/// **唯一性**：`file!()` 在用户侧展开，包含完整路径，跨文件全局唯一。
+/// **Stability**: As long as the element's source location does not change, the ID remains unchanged (incremental compilation safe).
+/// **Uniqueness**: `file!()` expands at the call site, containing the full path, globally unique across files.
 ///
-/// 若需要跨重构完全稳定的 ID，请使用 `id` 属性；
-/// 若在循环内使用，请改用 `key` 属性。
+/// If an ID completely stable across refactoring is required, use the `id` attribute;
+/// If used inside a loop, use the `key` attribute instead.
 fn make_auto_id(tag_name: &RsxElementName) -> TokenStream {
     let span = tag_name.span();
-    let loc = span.start(); // 需要 proc-macro2 的 span-locations 特性
+    let loc = span.start(); // Requires proc-macro2 span-locations feature
     let id_suffix = format!("__rsx_{}_L{}C{}", tag_name, loc.line, loc.column);
     quote! { concat!(file!(), "::", #id_suffix) }
 }
 
-/// 生成带 `key` 的复合自动 ID（用于循环场景）
+/// Generates a composite automatic ID with `key` (for loop scenarios).
 ///
-/// 动态 key 格式：`format!("{file}::{prefix}_{key}", file!(), key_expr)`
-/// 字面量 key 格式：`concat!(file!(), "::{prefix}_", "literal")`
+/// Dynamic key format: `format!("{file}::{prefix}_{key}", file!(), key_expr)`
+/// Literal key format: `concat!(file!(), "::{prefix}_", "literal")`
 ///
-/// `concat!(file!(), ...)` 在编译期求值（零开销）。动态 `key_expr` 在运行时拼接，
-/// 使同一循环迭代内的每个元素获得唯一 ID。
-/// `key_expr` 需实现 `std::fmt::Display`（数字、字符串、自定义类型均可）。
+/// `concat!(file!(), ...)` is evaluated at compile time (zero cost). Dynamic `key_expr` is concatenated at runtime,
+/// ensuring each element in the same loop iteration receives a unique ID.
+/// `key_expr` must implement `std::fmt::Display` (numbers, strings, and custom types are all supported).
 fn make_keyed_auto_id(tag_name: &RsxElementName, key_expr: &syn::Expr) -> TokenStream {
     let span = tag_name.span();
     let loc = span.start();
-    // 编译期常量前缀，包含文件路径 + 源码位置，格式如：
+    // Compile-time constant prefix containing file path + source location, formatted as:
     //   "src/views/list.rs::__rsx_li_L42C8_"
     let prefix_suffix = format!("::__rsx_{}_L{}C{}_", tag_name, loc.line, loc.column);
     if let Some(static_suffix) = static_key_suffix(key_expr) {
         return quote! { concat!(file!(), #prefix_suffix, #static_suffix) };
     }
-    // 运行时将 key 追加到前缀后，生成如：
+    // Append key to prefix at runtime, producing e.g.:
     //   "src/views/list.rs::__rsx_li_L42C8_item_42"
     quote! { format!(concat!(file!(), #prefix_suffix, "{}"), #key_expr) }
 }
