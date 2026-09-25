@@ -210,6 +210,13 @@ impl Styled for StyleRefinement {
     );
 
     styled_value_methods!(
+        inset,
+        top,
+        bottom,
+        left,
+        right,
+        grid_auto_rows,
+        grid_auto_columns,
         gap,
         gap_x,
         gap_y,
@@ -776,6 +783,13 @@ impl Styled for MockElement {
     );
 
     styled_value_methods!(
+        inset,
+        top,
+        bottom,
+        left,
+        right,
+        grid_auto_rows,
+        grid_auto_columns,
         gap,
         gap_x,
         gap_y,

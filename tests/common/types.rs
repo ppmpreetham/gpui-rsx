@@ -279,6 +279,11 @@ pub trait Styled: Sized {
     fn overflow_y_hidden(self) -> Self;
     fn absolute(self) -> Self;
     fn relative(self) -> Self;
+    fn inset<T>(self, v: T) -> Self;
+    fn top<T>(self, v: T) -> Self;
+    fn bottom<T>(self, v: T) -> Self;
+    fn left<T>(self, v: T) -> Self;
+    fn right<T>(self, v: T) -> Self;
     // --- color / opacity ---
     fn bg<T>(self, v: T) -> Self;
     fn text_color<T>(self, v: T) -> Self;
@@ -291,6 +296,8 @@ pub trait Styled: Sized {
     fn grid_cols_max_content(self, v: u16) -> Self;
     fn grid_rows_min_content(self, v: u16) -> Self;
     fn grid_rows_max_content(self, v: u16) -> Self;
+    fn grid_auto_rows<T>(self, v: T) -> Self;
+    fn grid_auto_columns<T>(self, v: T) -> Self;
     fn col_span(self, v: u16) -> Self;
     fn col_span_full(self) -> Self;
     fn col_start(self, v: i16) -> Self;

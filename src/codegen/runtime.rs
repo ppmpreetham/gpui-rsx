@@ -448,7 +448,7 @@ fn generate_length_fallback(spec: &super::tables::LengthClassSpec) -> TokenStrea
             }
             #fraction
             if let Ok(n) = rest.parse::<f32>().__rsx_finite() {
-                return el.#method(px(n));
+                return el.#method(rems(n * 0.25));
             }
         }
     }

@@ -117,7 +117,8 @@ pub(crate) fn parse_single_class_with_mode(class: &str, mode: ClassMode) -> Toke
             let prefix = &method_name[..=underscore_pos];
             if let Some(method) = lookup_spacing_method(prefix) {
                 let method_ident = syn::Ident::new(method, Span::call_site());
-                return quote! { .#method_ident(px(#num)) };
+                let rem_val = num * 0.25;
+                return quote! { .#method_ident(rems(#rem_val)) };
             }
         }
     }
@@ -366,7 +367,7 @@ fn parse_numeric_length_class(class: &str) -> Option<TokenStream> {
     if value.starts_with('[') || value.contains('/') {
         return None;
     }
-    parse_length_number(value).map(|value| length_method_call(method, LengthKind::Px(value)))
+    parse_length_number(value).map(|value| length_method_call(method, LengthKind::Rem(value * 0.25)))
 }
 
 fn parse_direct_color_class(class: &str) -> Option<TokenStream> {
