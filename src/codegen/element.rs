@@ -336,6 +336,22 @@ fn generate_element_checked(
         } else {
             quote! { gpui_kit::component::kbd::Kbd::new(gpui_kit::Keystroke::parse("unknown").unwrap()) }
         }
+    } else if tag_str == "table" {
+        quote! { gpui_kit::component::table::Table::new() }
+    } else if tag_str == "thead" || tag_str == "table_header" {
+        quote! { gpui_kit::component::table::TableHeader::new() }
+    } else if tag_str == "tbody" || tag_str == "table_body" {
+        quote! { gpui_kit::component::table::TableBody::new() }
+    } else if tag_str == "tfoot" || tag_str == "table_footer" {
+        quote! { gpui_kit::component::table::TableFooter::new() }
+    } else if tag_str == "tr" || tag_str == "table_row" {
+        quote! { gpui_kit::component::table::TableRow::new() }
+    } else if tag_str == "th" || tag_str == "table_head" {
+        quote! { gpui_kit::component::table::TableHead::new() }
+    } else if tag_str == "td" || tag_str == "table_cell" {
+        quote! { gpui_kit::component::table::TableCell::new() }
+    } else if tag_str == "caption" || tag_str == "table_caption" {
+        quote! { gpui_kit::component::table::TableCaption::new() }
     } else if tag_str == "button" || tag_str == "button_group" {
         let btn_id = if let Some(id_value) = user_id {
             quote! { #id_value }
@@ -703,6 +719,7 @@ mod tests {
         assert_eq!(static_key_suffix(&non_integer_negative), None);
     }
 }
+
 
 
 
