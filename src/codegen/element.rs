@@ -206,7 +206,7 @@ fn generate_element_checked(
         {
             return generate_component_call(&element.name, &[], &[], &[]);
         }
-        return generate_tag(&tag_str, &element.name, None, None, None);
+        return generate_tag(&tag_str, &element.name, None, None, None, None);
     }
 
     let has_base = element
@@ -244,6 +244,7 @@ fn generate_element_checked(
     let mut base_expr = None;
     let mut input_state = None;
     let mut img_source = None;
+    let mut icon_name = None;
     let mut canvas_prepaint = None;
     let mut canvas_paint = None;
     let mut has_styled = false;
@@ -266,6 +267,9 @@ fn generate_element_checked(
             }
             RsxAttribute::Value { name, value } if name == "key" => {
                 user_key = Some(value);
+            }
+            RsxAttribute::Value { name, value } if tag_str == "icon" && name == "name" => {
+                icon_name = Some(value);
             }
             RsxAttribute::Value { name, value } if name == "base" => {
                 base_expr = Some(value);
@@ -322,7 +326,23 @@ fn generate_element_checked(
     //  2. Needs id + key exists    → Auto-ID prefix + key (concatenated at runtime, ensures uniqueness in loops)
     //  3. Needs id, no key         → Auto-ID based purely on source location
     //  4. Does not need id         → Do not inject (key is silently ignored in this case)
-    let tag = if let Some(base) = base_expr {
+    let tag = if tag_str == "button" || tag_str == "button_group" {
+        let btn_id = if let Some(id_value) = user_id {
+            quote! { #id_value }
+        } else if let Some(key_expr) = user_key {
+            make_keyed_auto_id(&element.name, key_expr)
+        } else {
+            make_auto_id(&element.name)
+        };
+        needs_id = false;
+        user_id = None;
+        user_key = None;
+        if tag_str == "button" {
+            quote! { gpui_kit::component::button::Button::new(#btn_id) }
+        } else {
+            quote! { gpui_kit::component::button::ButtonGroup::new(#btn_id) }
+        }
+    } else if let Some(base) = base_expr {
         quote! { #base }
     } else if let Some(state) = input_state {
         if tag_str == "input" {
@@ -337,6 +357,7 @@ fn generate_element_checked(
             img_source,
             canvas_prepaint,
             canvas_paint,
+            icon_name,
         )?
     };
     let base = if let Some(id_value) = user_id {
@@ -476,6 +497,7 @@ fn generate_tag(
     img_source: Option<&syn::Expr>,
     canvas_prepaint: Option<&syn::Expr>,
     canvas_paint: Option<&syn::Expr>,
+    icon_name: Option<&syn::Expr>,
 ) -> CodegenResult {
     if name.as_single_ident().is_none() {
         let path = &name.path;
@@ -485,7 +507,14 @@ fn generate_tag(
     let path = &name.path;
     Ok(match tag_str {
         // Special tags: kept as function calls with the same name
-        "svg" => quote! { svg() },
+        "svg" => quote! { gpui_kit::svg() },
+        "icon" => {
+            if let Some(name) = icon_name {
+                quote! { gpui_kit::component::Icon::new(#name) }
+            } else {
+                quote! { gpui_kit::component::Icon::default() }
+            }
+        }
         "img" => {
             let Some(source) = img_source else {
                 return Err(missing_required_attribute_error(
@@ -521,7 +550,7 @@ fn generate_tag(
         }
         // HTML tags: uniformly mapped to div()
         "div" | "span" | "section" | "article" | "header" | "footer" | "main" | "nav" | "aside"
-        | "h1" | "h2" | "h3" | "h4" | "h5" | "h6" | "p" | "label" | "a" | "button" | "input"
+        | "h1" | "h2" | "h3" | "h4" | "h5" | "h6" | "p" | "label" | "a" | "input"
         | "textarea" | "select" | "form" | "ul" | "ol" | "li" | "kbd" | "Activity" => {
             quote! { div() }
         }
@@ -616,7 +645,7 @@ mod tests {
 
     #[test]
     fn img_requires_source() {
-        let error = generate_tag("img", &element_name("img"), None, None, None)
+        let error = generate_tag("img", &element_name("img"), None, None, None, None)
             .expect_err("img without src must fail")
             .to_string();
 
@@ -628,12 +657,12 @@ mod tests {
         let callback: syn::Expr = syn::parse_quote!(callback);
         let name = element_name("canvas");
 
-        let missing_prepaint = generate_tag("canvas", &name, None, None, Some(&callback))
+        let missing_prepaint = generate_tag("canvas", &name, None, None, Some(&callback), None)
             .expect_err("canvas without prepaint must fail")
             .to_string();
         assert!(missing_prepaint.contains("Element `<canvas>` requires `prepaint`"));
 
-        let missing_paint = generate_tag("canvas", &name, None, Some(&callback), None)
+        let missing_paint = generate_tag("canvas", &name, None, Some(&callback), None, None)
             .expect_err("canvas without paint must fail")
             .to_string();
         assert!(missing_paint.contains("Element `<canvas>` requires `paint`"));
@@ -664,3 +693,6 @@ mod tests {
         assert_eq!(static_key_suffix(&non_integer_negative), None);
     }
 }
+
+
+
