@@ -27,7 +27,7 @@ pub fn generate_component(item: ItemFn) -> syn::Result<TokenStream> {
     let mut builder_methods = TokenStream::new();
     let mut init_fields = TokenStream::new();
     let mut field_extracts = TokenStream::new();
-    
+
     struct_fields.extend(quote! { children: ::std::vec::Vec<::gpui::AnyElement>, });
     init_fields.extend(quote! { children: ::std::vec::Vec::new(), });
 

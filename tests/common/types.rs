@@ -4,7 +4,9 @@
 pub struct MockElement;
 
 impl MockElement {
-    pub fn object_fit<T>(self, _v: T) -> Self { self }
+    pub fn object_fit<T>(self, _v: T) -> Self {
+        self
+    }
 }
 
 #[derive(Debug)]

@@ -199,7 +199,11 @@ fn generate_element_checked(
 
     // Fast path: when there are no attributes and no children, skip all scans and return the base tag directly
     if element.attributes.is_empty() && element.children.is_empty() {
-        if tag_str.chars().next().is_some_and(|c| c.is_ascii_uppercase()) {
+        if tag_str
+            .chars()
+            .next()
+            .is_some_and(|c| c.is_ascii_uppercase())
+        {
             return generate_component_call(&element.name, &[], &[], &[]);
         }
         return generate_tag(&tag_str, &element.name, None, None, None);
@@ -209,7 +213,12 @@ fn generate_element_checked(
         .attributes
         .iter()
         .any(|attr| matches!(attr, RsxAttribute::Value { name, .. } if name == "base"));
-    if tag_str.chars().next().is_some_and(|c| c.is_ascii_uppercase()) && !has_base {
+    if tag_str
+        .chars()
+        .next()
+        .is_some_and(|c| c.is_ascii_uppercase())
+        && !has_base
+    {
         let attr_pairs: Vec<(&syn::Ident, &syn::Expr)> = element
             .attributes
             .iter()
@@ -238,7 +247,10 @@ fn generate_element_checked(
     let mut canvas_prepaint = None;
     let mut canvas_paint = None;
     let mut has_styled = false;
-    let is_component = tag_str.chars().next().map_or(false, |c| c.is_ascii_uppercase());
+    let is_component = tag_str
+        .chars()
+        .next()
+        .map_or(false, |c| c.is_ascii_uppercase());
     let mut needs_id = false;
 
     // Pre-allocate method chain capacity:
@@ -425,7 +437,9 @@ fn generate_component_call(
         let child_exprs: Vec<TokenStream> = children
             .iter()
             .map(|node| match node {
-                RsxNode::Element(elem) => generate_element_checked(elem, false, ClassMode::Permissive),
+                RsxNode::Element(elem) => {
+                    generate_element_checked(elem, false, ClassMode::Permissive)
+                }
                 RsxNode::Expr(expr) => Ok(quote! { #expr }),
                 RsxNode::Spread(expr) => Err(syn::Error::new(
                     expr.span(),

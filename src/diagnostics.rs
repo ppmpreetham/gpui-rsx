@@ -346,7 +346,10 @@ mod tests {
         let err = unsupported_jsx_attribute_error(&attr);
         let msg = err.to_string();
         assert!(msg.contains("whiteSpace"), "Should contain attribute name");
-        assert!(msg.contains("whitespace-nowrap"), "Should hint class syntax");
+        assert!(
+            msg.contains("whitespace-nowrap"),
+            "Should hint class syntax"
+        );
         assert!(msg.contains("whitespace_nowrap"), "Should hint flag syntax");
     }
 
@@ -355,7 +358,10 @@ mod tests {
         let attr = make_ident("groupDragOver");
         let err = unsupported_generic_attribute_error(&attr);
         let msg = err.to_string();
-        assert!(msg.contains("groupDragOver"), "Should contain attribute name");
+        assert!(
+            msg.contains("groupDragOver"),
+            "Should contain attribute name"
+        );
         assert!(msg.contains("group_drag_over::<YourType>"));
         assert!(msg.contains("cannot infer"));
     }

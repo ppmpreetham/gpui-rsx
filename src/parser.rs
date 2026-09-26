@@ -8,10 +8,11 @@ use proc_macro2::{Delimiter, Span, TokenStream, TokenTree};
 use quote::ToTokens;
 use std::fmt;
 use syn::{
+    Expr, ExprLit, Ident, Lit, Pat, Result, Token,
     ext::IdentExt,
     parse::{Parse, ParseStream, Parser},
     spanned::Spanned,
-    token, Expr, ExprLit, Ident, Lit, Pat, Result, Token,
+    token,
 };
 
 /// RSX macro body

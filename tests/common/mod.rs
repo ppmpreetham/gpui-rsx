@@ -45,10 +45,18 @@ impl Styled for StyleRefinement {
     fn style(&mut self) -> &mut StyleRefinement {
         self
     }
-    fn hover(self, f: impl FnOnce(Self) -> Self) -> Self { f(self) }
-    fn active(self, f: impl FnOnce(Self) -> Self) -> Self { f(self) }
-    fn focus(self, f: impl FnOnce(Self) -> Self) -> Self { f(self) }
-    fn group_hover(self, _: &str, f: impl FnOnce(Self) -> Self) -> Self { f(self) }
+    fn hover(self, f: impl FnOnce(Self) -> Self) -> Self {
+        f(self)
+    }
+    fn active(self, f: impl FnOnce(Self) -> Self) -> Self {
+        f(self)
+    }
+    fn focus(self, f: impl FnOnce(Self) -> Self) -> Self {
+        f(self)
+    }
+    fn group_hover(self, _: &str, f: impl FnOnce(Self) -> Self) -> Self {
+        f(self)
+    }
 
     styled_no_arg_methods!(
         flex,
@@ -249,7 +257,6 @@ impl Styled for StyleRefinement {
         border_color,
         opacity,
         text_size,
-
     );
 
     fn line_clamp(self, _: usize) -> Self {
@@ -600,7 +607,6 @@ impl MockElement {
     mock_no_arg_methods!(debug);
     mock_value_methods!(
         path,
-
         with_fallback,
         with_loading,
         image_cache,
@@ -820,7 +826,6 @@ impl Styled for MockElement {
         border_color,
         opacity,
         text_size,
-
     );
 
     fn line_clamp(self, lines: usize) -> Self {
@@ -909,8 +914,16 @@ impl Styled for MockElement {
         INTEGER_CALLS.with(|c| c.borrow_mut().push(("row_end", v as i32)));
         self
     }
-    fn hover(self, f: impl FnOnce(Self) -> Self) -> Self { f(self) }
-    fn active(self, f: impl FnOnce(Self) -> Self) -> Self { f(self) }
-    fn focus(self, f: impl FnOnce(Self) -> Self) -> Self { f(self) }
-    fn group_hover(self, _: &str, f: impl FnOnce(Self) -> Self) -> Self { f(self) }
+    fn hover(self, f: impl FnOnce(Self) -> Self) -> Self {
+        f(self)
+    }
+    fn active(self, f: impl FnOnce(Self) -> Self) -> Self {
+        f(self)
+    }
+    fn focus(self, f: impl FnOnce(Self) -> Self) -> Self {
+        f(self)
+    }
+    fn group_hover(self, _: &str, f: impl FnOnce(Self) -> Self) -> Self {
+        f(self)
+    }
 }

@@ -449,6 +449,8 @@ pub(crate) fn lookup_attr_flag_method(name: &str) -> Option<&'static str> {
     match name {
         "flexGrow" => Some("flex_grow_1"),
         "flexShrink" => Some("flex_shrink_1"),
+        "border" => Some("border_1"),
+        "rounded" => Some("rounded_md"),
         "border_t" => Some("border_t_1"),
         "border_b" => Some("border_b_1"),
         "border_l" => Some("border_l_1"),
@@ -1016,7 +1018,21 @@ pub(crate) fn dynamic_common_classes() -> impl Iterator<Item = &'static str> {
 ///
 /// Uses match instead of linear scan with `.contains()` over the original VALID_TEXT_SIZES array.
 pub(crate) fn is_valid_text_size(size: &str) -> bool {
-    matches!(size, "xs" | "sm" | "base" | "lg" | "xl" | "2xl" | "3xl" | "4xl" | "5xl" | "6xl" | "7xl" | "8xl" | "9xl")
+    matches!(
+        size,
+        "xs" | "sm"
+            | "base"
+            | "lg"
+            | "xl"
+            | "2xl"
+            | "3xl"
+            | "4xl"
+            | "5xl"
+            | "6xl"
+            | "7xl"
+            | "8xl"
+            | "9xl"
+    )
 }
 
 /// Look up default tag styles (only used when the element has the `styled` flag)
@@ -1451,7 +1467,9 @@ mod tests {
 
     #[test]
     fn text_size_validates_known_sizes() {
-        for size in ["xs", "sm", "base", "lg", "xl", "2xl", "3xl", "4xl", "5xl", "6xl", "7xl", "8xl", "9xl"] {
+        for size in [
+            "xs", "sm", "base", "lg", "xl", "2xl", "3xl", "4xl", "5xl", "6xl", "7xl", "8xl", "9xl",
+        ] {
             assert!(is_valid_text_size(size), "Should accept text size: {size}");
         }
     }

@@ -103,6 +103,10 @@ pub(crate) fn parse_single_class_with_mode(class: &str, mode: ClassMode) -> Toke
         return token;
     }
 
+    if let Some(token) = parse_arbitrary_bracket_length_class(class) {
+        return token;
+    }
+
     if let Some(token) = parse_direct_color_class(class) {
         return token;
     }
@@ -151,6 +155,10 @@ pub(crate) fn parse_single_class_with_mode(class: &str, mode: ClassMode) -> Toke
     // "border-2" → .border_2()
     if method_name == "border" {
         return quote! { .border_1() };
+    }
+
+    if method_name == "rounded" {
+        return quote! { .rounded_md() };
     }
 
     if method_name == "no_underline" {
@@ -384,7 +392,8 @@ fn parse_numeric_length_class(class: &str) -> Option<TokenStream> {
     if value.starts_with('[') || value.contains('/') {
         return None;
     }
-    parse_length_number(value).map(|value| length_method_call(method, LengthKind::Rem(value * 0.25)))
+    parse_length_number(value)
+        .map(|value| length_method_call(method, LengthKind::Rem(value * 0.25)))
 }
 
 fn parse_direct_color_class(class: &str) -> Option<TokenStream> {
@@ -700,4 +709,35 @@ mod tests {
         assert_eq!(parse_length_number("inf"), None);
         assert_eq!(parse_length_number("-inf"), None);
     }
+}
+
+fn parse_arbitrary_bracket_length_class(class: &str) -> Option<TokenStream> {
+    if let Some(rest) = class.strip_prefix("text-[")
+        && let Some(inner) = rest.strip_suffix(']')
+    {
+        if let Some(num) = inner.strip_suffix("px")
+            && let Ok(v) = num.parse::<f32>()
+        {
+            return Some(quote! { .text_size(px(#v)) });
+        } else if let Some(num) = inner.strip_suffix("rem")
+            && let Ok(v) = num.parse::<f32>()
+        {
+            return Some(quote! { .text_size(rems(#v)) });
+        }
+    }
+
+    if let Some(rest) = class.strip_prefix("rounded-[")
+        && let Some(inner) = rest.strip_suffix(']')
+    {
+        if let Some(num) = inner.strip_suffix("px")
+            && let Ok(v) = num.parse::<f32>()
+        {
+            return Some(quote! { .rounded(px(#v)) });
+        } else if let Some(num) = inner.strip_suffix("rem")
+            && let Ok(v) = num.parse::<f32>()
+        {
+            return Some(quote! { .rounded(rems(#v)) });
+        }
+    }
+    None
 }

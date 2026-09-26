@@ -1540,7 +1540,10 @@ fn test_latest_interactive_event_aliases_do_not_inject_id() {
             "capture_mouse_pressure",
             zopra_gpui_view::rsx_expand! { <div captureMousePressure={h} /> },
         ),
-        ("on_pinch", zopra_gpui_view::rsx_expand! { <div onPinch={h} /> }),
+        (
+            "on_pinch",
+            zopra_gpui_view::rsx_expand! { <div onPinch={h} /> },
+        ),
         (
             "capture_pinch",
             zopra_gpui_view::rsx_expand! { <div capturePinch={h} /> },
