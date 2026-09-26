@@ -245,6 +245,7 @@ fn generate_element_checked(
     let mut input_state = None;
     let mut img_source = None;
     let mut icon_name = None;
+    let mut kbd_keys = None;
     let mut canvas_prepaint = None;
     let mut canvas_paint = None;
     let mut has_styled = false;
@@ -270,6 +271,9 @@ fn generate_element_checked(
             }
             RsxAttribute::Value { name, value } if tag_str == "icon" && name == "name" => {
                 icon_name = Some(value);
+            }
+            RsxAttribute::Value { name, value } if tag_str == "kbd" && name == "keys" => {
+                kbd_keys = Some(value);
             }
             RsxAttribute::Value { name, value } if name == "base" => {
                 base_expr = Some(value);
@@ -326,7 +330,13 @@ fn generate_element_checked(
     //  2. Needs id + key exists    → Auto-ID prefix + key (concatenated at runtime, ensures uniqueness in loops)
     //  3. Needs id, no key         → Auto-ID based purely on source location
     //  4. Does not need id         → Do not inject (key is silently ignored in this case)
-    let tag = if tag_str == "button" || tag_str == "button_group" {
+    let tag = if tag_str == "kbd" {
+        if let Some(keys) = kbd_keys {
+            quote! { gpui_kit::component::kbd::Kbd::new(gpui_kit::Keystroke::parse(#keys).unwrap()) }
+        } else {
+            quote! { gpui_kit::component::kbd::Kbd::new(gpui_kit::Keystroke::parse("unknown").unwrap()) }
+        }
+    } else if tag_str == "button" || tag_str == "button_group" {
         let btn_id = if let Some(id_value) = user_id {
             quote! { #id_value }
         } else if let Some(key_expr) = user_key {
@@ -693,6 +703,8 @@ mod tests {
         assert_eq!(static_key_suffix(&non_integer_negative), None);
     }
 }
+
+
 
 
 
