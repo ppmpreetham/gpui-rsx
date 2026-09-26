@@ -2591,7 +2591,7 @@ fn test_dynamic_class_arbitrary_gap() {
 
     assert_eq!(
         take_length_calls(),
-        vec![("px", 7.0), ("px", 9.0), ("px", 16.0)]
+        vec![("rems", 1.75), ("rems", 2.25), ("rems", 4.0)]
     );
 }
 
@@ -2612,11 +2612,11 @@ fn test_dynamic_class_arbitrary_padding() {
     assert_eq!(
         take_length_calls(),
         vec![
-            ("px", 5.0),
-            ("px", 5.0),
-            ("px", 5.0),
-            ("px", 3.0),
-            ("px", 3.0)
+            ("rems", 1.25),
+            ("rems", 1.25),
+            ("rems", 1.25),
+            ("rems", 0.75),
+            ("rems", 0.75)
         ]
     );
 }
@@ -2635,7 +2635,7 @@ fn test_dynamic_class_arbitrary_margin() {
 
     assert_eq!(
         take_length_calls(),
-        vec![("px", 3.0), ("px", 3.0), ("px", 3.0)]
+        vec![("rems", 0.75), ("rems", 0.75), ("rems", 0.75)]
     );
 }
 
@@ -2664,7 +2664,7 @@ fn test_dynamic_class_sizing_arbitrary() {
 
     assert_eq!(
         take_length_calls(),
-        vec![("px", 48.0), ("px", 16.0), ("px", 8.0)]
+        vec![("rems", 12.0), ("rems", 4.0), ("rems", 2.0)]
     );
 }
 
@@ -2709,7 +2709,7 @@ fn test_dynamic_class_keeps_valid_lengths_when_neighbors_are_invalid() {
 
     assert_eq!(
         take_length_calls(),
-        vec![("px", 14.0), ("px", 4.0), ("relative", 0.25)]
+        vec![("px", 14.0), ("rems", 1.0), ("relative", 0.25)]
     );
 }
 
@@ -2756,7 +2756,7 @@ fn test_dynamic_class_gap_xy_arbitrary() {
     let cls = "gap-y-6";
     let _b = rsx! { <div class={cls} /> };
 
-    assert_eq!(take_length_calls(), vec![("px", 4.0), ("px", 6.0)]);
+    assert_eq!(take_length_calls(), vec![("rems", 1.0), ("rems", 1.5)]);
 }
 
 #[test]
@@ -2811,7 +2811,7 @@ fn test_strict_dynamic_class_supports_shared_fast_path_entries() {
     let _el = zopra_gpui_view::rsx_strict! { <div class={cls} /> };
 
     assert_eq!(take_font_weight_calls(), vec![700.0]);
-    assert_eq!(take_length_calls(), vec![("px", 4.0)]);
+    assert_eq!(take_length_calls(), vec![("rems", 1.0)]);
 }
 
 #[test]
@@ -2868,7 +2868,7 @@ fn test_conditional_literal_class_static_path_evaluates_condition_once() {
     };
 
     assert_eq!(condition_calls, 1);
-    assert_eq!(take_length_calls(), vec![("px", 7.0)]);
+    assert_eq!(take_length_calls(), vec![("rems", 1.75)]);
 }
 
 #[test]
@@ -2884,7 +2884,7 @@ fn test_match_literal_class_static_path_evaluates_expr_once() {
     };
 
     assert_eq!(match_expr_calls, 1);
-    assert_eq!(take_length_calls(), vec![("px", 7.0)]);
+    assert_eq!(take_length_calls(), vec![("rems", 1.75)]);
 }
 
 #[test]
