@@ -1,6 +1,6 @@
 [package]
 name = "zopra-gpui-view"
-version = "0.1.11"
+version = "0.1.111"
 edition = "2024"
 rust-version = "1.88"
 description = "A JSX-like macro for GPUI - simplify UI development with HTML-like syntax"

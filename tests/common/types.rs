@@ -302,8 +302,6 @@ pub trait Styled: Sized {
     fn grid_cols_max_content(self, v: u16) -> Self;
     fn grid_rows_min_content(self, v: u16) -> Self;
     fn grid_rows_max_content(self, v: u16) -> Self;
-    fn grid_auto_rows<T>(self, v: T) -> Self;
-    fn grid_auto_columns<T>(self, v: T) -> Self;
     fn col_span(self, v: u16) -> Self;
     fn col_span_full(self) -> Self;
     fn col_start(self, v: i16) -> Self;

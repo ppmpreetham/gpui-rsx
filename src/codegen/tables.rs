@@ -579,8 +579,6 @@ pub(crate) fn lookup_spacing_method(prefix: &str) -> Option<&'static str> {
         "top_" => Some("top"),
         "bottom_" => Some("bottom"),
         "left_" => Some("left"),
-        "auto_rows_" => Some("grid_auto_rows"),
-        "auto_cols_" => Some("grid_auto_columns"),
         "translate_x_" => Some("left"),
         "translate_y_" => Some("top"),
         _ => None,
@@ -676,8 +674,6 @@ pub(crate) const LENGTH_CLASS_SPECS: &[LengthClassSpec] = &[
     LengthClassSpec::spacing("bottom-", "bottom"),
     LengthClassSpec::spacing("left-", "left"),
     LengthClassSpec::spacing("right-", "right"),
-    LengthClassSpec::sizing("auto-rows-", "grid_auto_rows"),
-    LengthClassSpec::sizing("auto-cols-", "grid_auto_columns"),
     LengthClassSpec::spacing("translate-x-", "left"),
     LengthClassSpec::spacing("translate-y-", "top"),
 ];
