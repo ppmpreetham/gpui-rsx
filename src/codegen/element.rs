@@ -199,7 +199,7 @@ fn generate_element_checked(
 
     // Fast path: when there are no attributes and no children, skip all scans and return the base tag directly
     if element.attributes.is_empty() && element.children.is_empty() {
-        if tag_str.chars().next().is_some_and(|c| c.is_ascii_uppercase()) && !["Resizable", "ResizablePanel", "Sidebar", "SidebarHeader", "SidebarFooter", "SidebarMenu", "SidebarGroup", "SidebarMenuItem", "SidebarToggleButton", "TitleBar"].contains(&tag_str.as_str()) {
+        if tag_str.chars().next().is_some_and(|c| c.is_ascii_uppercase()) && !["Resizable", "ResizablePanel", "Sidebar", "SidebarHeader", "SidebarFooter", "SidebarMenu", "SidebarGroup", "SidebarMenuItem", "SidebarToggleButton", "TitleBar", "Tab"].contains(&tag_str.as_str()) {
             return generate_component_call(&element.name, &[], &[], &[]);
         }
         return generate_tag(&tag_str, &element.name, None, None, None, None);
@@ -209,7 +209,7 @@ fn generate_element_checked(
         .attributes
         .iter()
         .any(|attr| matches!(attr, RsxAttribute::Value { name, .. } if name == "base"));
-    if tag_str.chars().next().is_some_and(|c| c.is_ascii_uppercase()) && !has_base && !["Resizable", "ResizablePanel", "Sidebar", "SidebarHeader", "SidebarFooter", "SidebarMenu", "SidebarGroup", "SidebarMenuItem", "SidebarToggleButton", "TitleBar"].contains(&tag_str.as_str()) {
+    if tag_str.chars().next().is_some_and(|c| c.is_ascii_uppercase()) && !has_base && !["Resizable", "ResizablePanel", "Sidebar", "SidebarHeader", "SidebarFooter", "SidebarMenu", "SidebarGroup", "SidebarMenuItem", "SidebarToggleButton", "TitleBar", "Tab"].contains(&tag_str.as_str()) {
         let attr_pairs: Vec<(&syn::Ident, &syn::Expr)> = element
             .attributes
             .iter()
@@ -243,7 +243,7 @@ fn generate_element_checked(
     let mut canvas_prepaint = None;
     let mut canvas_paint = None;
     let mut has_styled = false;
-    let is_component = tag_str.chars().next().map_or(false, |c| c.is_ascii_uppercase()) && !["Resizable", "ResizablePanel", "Sidebar", "SidebarHeader", "SidebarFooter", "SidebarMenu", "SidebarGroup", "SidebarMenuItem", "SidebarToggleButton", "TitleBar"].contains(&tag_str.as_str());
+    let is_component = tag_str.chars().next().map_or(false, |c| c.is_ascii_uppercase()) && !["Resizable", "ResizablePanel", "Sidebar", "SidebarHeader", "SidebarFooter", "SidebarMenu", "SidebarGroup", "SidebarMenuItem", "SidebarToggleButton", "TitleBar", "Tab"].contains(&tag_str.as_str());
     let mut needs_id = false;
 
     // Pre-allocate method chain capacity:
@@ -310,6 +310,18 @@ fn generate_element_checked(
             RsxAttribute::Value { name, value } if tag_str == "svg" && name == "src" => {
                 methods.push(quote! { .path(#value) });
             }
+            RsxAttribute::Value { name, value } if name == "tooltip" => {
+                if matches!(value, syn::Expr::Closure(_)) {
+                    methods.push(quote! { .tooltip(#value) });
+                } else {
+                    methods.push(quote! { .tooltip(move |window, cx| gpui_kit::component::tooltip::Tooltip::new(#value).build(window, cx)) });
+                }
+            }
+            RsxAttribute::Value { name, value } if name == "tooltip_with_action" => {
+                methods.push(quote! {
+                    .tooltip_with_action((#value).0, (#value).1, (#value).2)
+                });
+            }
             RsxAttribute::Flag(name) if name == "styled" => {
                 has_styled = true;
             }
@@ -355,6 +367,21 @@ fn generate_element_checked(
         } else {
             quote! { #constructor(#res_id) }
         }
+    } else if tag_str == "nav" {
+        let res_id = if let Some(id_value) = user_id {
+            quote! { #id_value }
+        } else if let Some(key_expr) = user_key {
+            make_keyed_auto_id(&element.name, key_expr)
+        } else {
+            make_auto_id(&element.name)
+        };
+        needs_id = false;
+        user_id = None;
+        user_key = None;
+        quote! { gpui_kit::component::tab::TabBar::new(#res_id) }
+    } else if tag_str == "Tab" {
+        needs_id = false;
+        quote! { gpui_kit::component::tab::Tab::new() }
     } else if tag_str == "TitleBar" {
         quote! { gpui_kit::component::TitleBar::new() }
     } else if tag_str == "Sidebar" {
@@ -450,7 +477,7 @@ fn generate_element_checked(
             img_source,
             canvas_prepaint,
             canvas_paint,
-            icon_name,
+            icon_name
         )?
     };
     let base = if let Some(id_value) = user_id {
@@ -738,8 +765,7 @@ mod tests {
 
     #[test]
     fn img_requires_source() {
-        let error = generate_tag("img", &element_name("img"), None, None, None, None)
-            .expect_err("img without src must fail")
+        let error = generate_tag("img", &element_name("img"), None, None, None, None).expect_err("img without src must fail")
             .to_string();
 
         assert!(error.contains("Element `<img>` requires `src`"));
@@ -750,13 +776,11 @@ mod tests {
         let callback: syn::Expr = syn::parse_quote!(callback);
         let name = element_name("canvas");
 
-        let missing_prepaint = generate_tag("canvas", &name, None, None, Some(&callback), None)
-            .expect_err("canvas without prepaint must fail")
+        let missing_prepaint = generate_tag("canvas", &name, None, None, Some(&callback), None).expect_err("canvas without prepaint must fail")
             .to_string();
         assert!(missing_prepaint.contains("Element `<canvas>` requires `prepaint`"));
 
-        let missing_paint = generate_tag("canvas", &name, None, Some(&callback), None, None)
-            .expect_err("canvas without paint must fail")
+        let missing_paint = generate_tag("canvas", &name, None, Some(&callback), None, None).expect_err("canvas without paint must fail")
             .to_string();
         assert!(missing_paint.contains("Element `<canvas>` requires `paint`"));
     }
@@ -786,9 +810,3 @@ mod tests {
         assert_eq!(static_key_suffix(&non_integer_negative), None);
     }
 }
-
-
-
-
-
-
