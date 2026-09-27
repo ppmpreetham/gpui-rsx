@@ -199,11 +199,7 @@ fn generate_element_checked(
 
     // Fast path: when there are no attributes and no children, skip all scans and return the base tag directly
     if element.attributes.is_empty() && element.children.is_empty() {
-        if tag_str
-            .chars()
-            .next()
-            .is_some_and(|c| c.is_ascii_uppercase())
-        {
+        if tag_str.chars().next().is_some_and(|c| c.is_ascii_uppercase()) && !["Resizable", "ResizablePanel", "Sidebar", "SidebarHeader", "SidebarFooter", "SidebarMenu", "SidebarGroup", "SidebarMenuItem", "SidebarToggleButton", "TitleBar"].contains(&tag_str.as_str()) {
             return generate_component_call(&element.name, &[], &[], &[]);
         }
         return generate_tag(&tag_str, &element.name, None, None, None, None);
@@ -213,12 +209,7 @@ fn generate_element_checked(
         .attributes
         .iter()
         .any(|attr| matches!(attr, RsxAttribute::Value { name, .. } if name == "base"));
-    if tag_str
-        .chars()
-        .next()
-        .is_some_and(|c| c.is_ascii_uppercase())
-        && !has_base
-    {
+    if tag_str.chars().next().is_some_and(|c| c.is_ascii_uppercase()) && !has_base && !["Resizable", "ResizablePanel", "Sidebar", "SidebarHeader", "SidebarFooter", "SidebarMenu", "SidebarGroup", "SidebarMenuItem", "SidebarToggleButton", "TitleBar"].contains(&tag_str.as_str()) {
         let attr_pairs: Vec<(&syn::Ident, &syn::Expr)> = element
             .attributes
             .iter()
@@ -246,13 +237,13 @@ fn generate_element_checked(
     let mut img_source = None;
     let mut icon_name = None;
     let mut kbd_keys = None;
+    let mut resizable_vertical = false;
+    let mut resizable_state = None;
+    let mut sidebar_label = None;
     let mut canvas_prepaint = None;
     let mut canvas_paint = None;
     let mut has_styled = false;
-    let is_component = tag_str
-        .chars()
-        .next()
-        .map_or(false, |c| c.is_ascii_uppercase());
+    let is_component = tag_str.chars().next().map_or(false, |c| c.is_ascii_uppercase()) && !["Resizable", "ResizablePanel", "Sidebar", "SidebarHeader", "SidebarFooter", "SidebarMenu", "SidebarGroup", "SidebarMenuItem", "SidebarToggleButton", "TitleBar"].contains(&tag_str.as_str());
     let mut needs_id = false;
 
     // Pre-allocate method chain capacity:
@@ -274,6 +265,17 @@ fn generate_element_checked(
             }
             RsxAttribute::Value { name, value } if tag_str == "kbd" && name == "keys" => {
                 kbd_keys = Some(value);
+            }
+            RsxAttribute::Value { name, value } if tag_str == "Resizable" && name == "state" => {
+                resizable_state = Some(value);
+            }
+            RsxAttribute::Value { name, value } if (tag_str == "SidebarGroup" || tag_str == "SidebarMenuItem") && name == "label" => {
+                sidebar_label = Some(value);
+            }
+            RsxAttribute::Flag(name) if tag_str == "Resizable" && (name == "vertical" || name == "horizontal") => {
+                if name == "vertical" {
+                    resizable_vertical = true;
+                }
             }
             RsxAttribute::Value { name, value } if name == "base" => {
                 base_expr = Some(value);
@@ -330,7 +332,72 @@ fn generate_element_checked(
     //  2. Needs id + key exists    → Auto-ID prefix + key (concatenated at runtime, ensures uniqueness in loops)
     //  3. Needs id, no key         → Auto-ID based purely on source location
     //  4. Does not need id         → Do not inject (key is silently ignored in this case)
-    let tag = if tag_str == "kbd" {
+    let tag = if tag_str == "Resizable" {
+        let res_id = if let Some(id_value) = user_id {
+            quote! { #id_value }
+        } else if let Some(key_expr) = user_key {
+            make_keyed_auto_id(&element.name, key_expr)
+        } else {
+            make_auto_id(&element.name)
+        };
+        needs_id = false;
+        user_id = None;
+        user_key = None;
+
+        let constructor = if resizable_vertical {
+            quote! { gpui_kit::component::resizable::v_resizable }
+        } else {
+            quote! { gpui_kit::component::resizable::h_resizable }
+        };
+
+        if let Some(state) = resizable_state {
+            quote! { #constructor(#res_id).with_state(#state) }
+        } else {
+            quote! { #constructor(#res_id) }
+        }
+    } else if tag_str == "TitleBar" {
+        quote! { gpui_kit::component::TitleBar::new() }
+    } else if tag_str == "Sidebar" {
+        let res_id = if let Some(id_value) = user_id {
+            quote! { #id_value }
+        } else if let Some(key_expr) = user_key {
+            make_keyed_auto_id(&element.name, key_expr)
+        } else {
+            make_auto_id(&element.name)
+        };
+        needs_id = false;
+        user_id = None;
+        user_key = None;
+        quote! { gpui_kit::component::sidebar::Sidebar::new(#res_id) }
+    } else if tag_str == "SidebarHeader" {
+        needs_id = false;
+        quote! { gpui_kit::component::sidebar::SidebarHeader::new() }
+    } else if tag_str == "SidebarFooter" {
+        needs_id = false;
+        quote! { gpui_kit::component::sidebar::SidebarFooter::new() }
+    } else if tag_str == "SidebarMenu" {
+        needs_id = false;
+        quote! { gpui_kit::component::sidebar::SidebarMenu::new() }
+    } else if tag_str == "SidebarGroup" {
+        needs_id = false;
+        if let Some(lbl) = sidebar_label {
+            quote! { gpui_kit::component::sidebar::SidebarGroup::new(#lbl) }
+        } else {
+            quote! { gpui_kit::component::sidebar::SidebarGroup::new("unknown") }
+        }
+    } else if tag_str == "SidebarMenuItem" {
+        needs_id = false;
+        if let Some(lbl) = sidebar_label {
+            quote! { gpui_kit::component::sidebar::SidebarMenuItem::new(#lbl) }
+        } else {
+            quote! { gpui_kit::component::sidebar::SidebarMenuItem::new("unknown") }
+        }
+    } else if tag_str == "SidebarToggleButton" {
+        needs_id = false;
+        quote! { gpui_kit::component::sidebar::SidebarToggleButton::new() }
+    } else if tag_str == "ResizablePanel" {
+        quote! { gpui_kit::component::resizable::resizable_panel() }
+    } else if tag_str == "kbd" {
         if let Some(keys) = kbd_keys {
             quote! { gpui_kit::component::kbd::Kbd::new(gpui_kit::Keystroke::parse(#keys).unwrap()) }
         } else {
