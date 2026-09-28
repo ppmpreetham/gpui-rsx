@@ -199,7 +199,7 @@ fn generate_element_checked(
 
     // Fast path: when there are no attributes and no children, skip all scans and return the base tag directly
     if element.attributes.is_empty() && element.children.is_empty() {
-        if tag_str.chars().next().is_some_and(|c| c.is_ascii_uppercase()) && !["Resizable", "ResizablePanel", "Sidebar", "SidebarHeader", "SidebarFooter", "SidebarMenu", "SidebarGroup", "SidebarMenuItem", "SidebarToggleButton", "TitleBar", "Tab"].contains(&tag_str.as_str()) {
+        if tag_str.chars().next().is_some_and(|c| c.is_ascii_uppercase()) && !["Resizable", "ResizablePanel", "Sidebar", "SidebarHeader", "SidebarFooter", "SidebarMenu", "SidebarGroup", "SidebarMenuItem", "SidebarToggleButton", "TitleBar", "Tab", "DataTable"].contains(&tag_str.as_str()) {
             return generate_component_call(&element.name, &[], &[], &[]);
         }
         return generate_tag(&tag_str, &element.name, None, None, None, None);
@@ -209,7 +209,7 @@ fn generate_element_checked(
         .attributes
         .iter()
         .any(|attr| matches!(attr, RsxAttribute::Value { name, .. } if name == "base"));
-    if tag_str.chars().next().is_some_and(|c| c.is_ascii_uppercase()) && !has_base && !["Resizable", "ResizablePanel", "Sidebar", "SidebarHeader", "SidebarFooter", "SidebarMenu", "SidebarGroup", "SidebarMenuItem", "SidebarToggleButton", "TitleBar", "Tab"].contains(&tag_str.as_str()) {
+    if tag_str.chars().next().is_some_and(|c| c.is_ascii_uppercase()) && !has_base && !["Resizable", "ResizablePanel", "Sidebar", "SidebarHeader", "SidebarFooter", "SidebarMenu", "SidebarGroup", "SidebarMenuItem", "SidebarToggleButton", "TitleBar", "Tab", "DataTable"].contains(&tag_str.as_str()) {
         let attr_pairs: Vec<(&syn::Ident, &syn::Expr)> = element
             .attributes
             .iter()
@@ -237,13 +237,14 @@ fn generate_element_checked(
     let mut img_source = None;
     let mut icon_name = None;
     let mut kbd_keys = None;
+    let mut table_state = None;
     let mut resizable_vertical = false;
     let mut resizable_state = None;
     let mut sidebar_label = None;
     let mut canvas_prepaint = None;
     let mut canvas_paint = None;
     let mut has_styled = false;
-    let is_component = tag_str.chars().next().map_or(false, |c| c.is_ascii_uppercase()) && !["Resizable", "ResizablePanel", "Sidebar", "SidebarHeader", "SidebarFooter", "SidebarMenu", "SidebarGroup", "SidebarMenuItem", "SidebarToggleButton", "TitleBar", "Tab"].contains(&tag_str.as_str());
+    let is_component = tag_str.chars().next().map_or(false, |c| c.is_ascii_uppercase()) && !["Resizable", "ResizablePanel", "Sidebar", "SidebarHeader", "SidebarFooter", "SidebarMenu", "SidebarGroup", "SidebarMenuItem", "SidebarToggleButton", "TitleBar", "Tab", "DataTable"].contains(&tag_str.as_str());
     let mut needs_id = false;
 
     // Pre-allocate method chain capacity:
@@ -265,6 +266,9 @@ fn generate_element_checked(
             }
             RsxAttribute::Value { name, value } if tag_str == "kbd" && name == "keys" => {
                 kbd_keys = Some(value);
+            }
+            RsxAttribute::Value { name, value } if tag_str == "DataTable" && name == "state" => {
+                table_state = Some(value);
             }
             RsxAttribute::Value { name, value } if tag_str == "Resizable" && name == "state" => {
                 resizable_state = Some(value);
@@ -382,6 +386,12 @@ fn generate_element_checked(
     } else if tag_str == "Tab" {
         needs_id = false;
         quote! { gpui_kit::component::tab::Tab::new() }
+    } else if tag_str == "DataTable" {
+        let Some(state) = table_state else {
+            return Err(syn::Error::new_spanned(&element.name, "Element <DataTable> requires a state attribute.").to_compile_error().into());
+        };
+        needs_id = false;
+        quote! { gpui_kit::component::table::DataTable::new(#state) }
     } else if tag_str == "TitleBar" {
         quote! { gpui_kit::component::TitleBar::new() }
     } else if tag_str == "Sidebar" {
