@@ -1,4 +1,4 @@
-//! Static lookup tables and constant definitions
+﻿//! Static lookup tables and constant definitions
 //!
 //! This module contains all compile-time constant tables and O(1) lookup functions, independent of other codegen submodules.
 //!
@@ -844,6 +844,8 @@ pub(crate) const COMMON_CLASS_SUPPORT: &[CommonClassSupport] = &[
     CommonClassSupport::strict_only("h-px"),
     CommonClassSupport::strict_only("size-px"),
     CommonClassSupport::strict_only("w-auto"),
+    CommonClassSupport::strict_only("w-fit"),
+    CommonClassSupport::strict_only("h-fit"),
     CommonClassSupport::strict_only("h-auto"),
     // Text
     CommonClassSupport::both("text-xs"),
@@ -1481,3 +1483,4 @@ mod tests {
         assert!(!is_valid_text_size(""));
     }
 }
+
