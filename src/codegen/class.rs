@@ -247,8 +247,16 @@ pub(crate) fn parse_single_class_with_mode(class: &str, mode: ClassMode) -> Toke
 
 fn parse_tailwind_alias_class(class: &str) -> Option<TokenStream> {
     match class {
-        "flex-grow" => Some(quote! { .flex_grow_1() }),
-        "flex-shrink" => Some(quote! { .flex_shrink_1() }),
+        "flex-grow" | "grow" => Some(quote! { .flex_grow_1() }),
+        "flex-shrink" | "shrink" => Some(quote! { .flex_shrink_1() }),
+        "grow-0" => Some(quote! { .flex_grow_0() }),
+        "shrink-0" => Some(quote! { .flex_shrink_0() }),
+        "w-fit" => Some(quote! { .w_auto() }),
+        "h-fit" => Some(quote! { .h_auto() }),
+        "min-w-fit" => Some(quote! { .min_w_auto() }),
+        "max-w-fit" => Some(quote! { .max_w_auto() }),
+        "min-h-fit" => Some(quote! { .min_h_auto() }),
+        "max-h-fit" => Some(quote! { .max_h_auto() }),
         _ => None,
     }
 }

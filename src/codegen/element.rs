@@ -125,7 +125,7 @@ fn generate_body_checked(body: &RsxBody, mode: ClassMode) -> CodegenResult {
         RsxBody::Fragment(children) => {
             let child_exprs: Vec<TokenStream> = children
                 .iter()
-                .map(|node| generate_node_checked(node, false, mode))
+                .map(|node| generate_node_checked(node, false, mode, &[]))
                 .collect::<Result<_, _>>()?;
             // Fragments retain vec![] — the return type is user-facing API
             Ok(quote! { vec![#(#child_exprs),*] })
@@ -136,9 +136,23 @@ fn generate_body_checked(body: &RsxBody, mode: ClassMode) -> CodegenResult {
 /// Generates code for a single child node.
 ///
 /// Ensures generated code has proper type inference and supports the IntoElement trait.
-fn generate_node_checked(node: &RsxNode, require_loop_key: bool, mode: ClassMode) -> CodegenResult {
+pub(crate) fn generate_node_checked(
+    node: &RsxNode,
+    require_loop_key: bool,
+    mode: ClassMode,
+    inherited_classes: &[String],
+) -> CodegenResult {
     match node {
-        RsxNode::Element(elem) => generate_element_checked(elem, require_loop_key, mode),
+        RsxNode::Element(elem) => {
+            let mut expr = generate_element_checked(elem, require_loop_key, mode)?;
+            if !inherited_classes.is_empty() {
+                let methods: Vec<_> = inherited_classes.iter()
+                    .map(|cls| crate::codegen::class::parse_single_class_with_mode(cls, mode))
+                    .collect();
+                expr = quote::quote! { #expr #(#methods)* };
+            }
+            Ok(expr)
+        }
         // Expressions are automatically type-inferred; GPUI's .child() accepts impl IntoElement
         RsxNode::Expr(expr) => Ok(expr.to_token_stream()),
         RsxNode::Spread(expr) => Ok(expr.to_token_stream()),
@@ -146,7 +160,7 @@ fn generate_node_checked(node: &RsxNode, require_loop_key: bool, mode: ClassMode
             binding,
             iter,
             body,
-        } => generate_for_loop_checked(binding, iter, body, mode),
+        } => generate_for_loop_checked(binding, iter, body, mode, inherited_classes),
     }
 }
 
@@ -166,10 +180,11 @@ fn generate_for_loop_checked(
     iter: &syn::Expr,
     body: &[RsxNode],
     mode: ClassMode,
+    inherited_classes: &[String],
 ) -> CodegenResult {
     let body_exprs: Vec<TokenStream> = body
         .iter()
-        .map(|node| generate_node_checked(node, true, mode))
+        .map(|node| generate_node_checked(node, true, mode, inherited_classes))
         .collect::<Result<_, _>>()?;
     if body_exprs.len() == 1 {
         let single = &body_exprs[0];
@@ -199,7 +214,7 @@ fn generate_element_checked(
 
     // Fast path: when there are no attributes and no children, skip all scans and return the base tag directly
     if element.attributes.is_empty() && element.children.is_empty() {
-        if tag_str.chars().next().is_some_and(|c| c.is_ascii_uppercase()) && !["Resizable", "ResizablePanel", "Sidebar", "SidebarHeader", "SidebarFooter", "SidebarMenu", "SidebarGroup", "SidebarMenuItem", "SidebarToggleButton", "TitleBar", "Tab", "DataTable"].contains(&tag_str.as_str()) {
+        if tag_str.chars().next().is_some_and(|c| c.is_ascii_uppercase()) && !["Resizable", "ResizablePanel", "Sidebar", "SidebarHeader", "SidebarFooter", "SidebarMenu", "SidebarGroup", "SidebarMenuItem", "SidebarToggleButton", "TitleBar", "Tab", "DataTable", "DropdownButton"].contains(&tag_str.as_str()) {
             return generate_component_call(&element.name, &[], &[], &[]);
         }
         return generate_tag(&tag_str, &element.name, None, None, None, None);
@@ -209,7 +224,7 @@ fn generate_element_checked(
         .attributes
         .iter()
         .any(|attr| matches!(attr, RsxAttribute::Value { name, .. } if name == "base"));
-    if tag_str.chars().next().is_some_and(|c| c.is_ascii_uppercase()) && !has_base && !["Resizable", "ResizablePanel", "Sidebar", "SidebarHeader", "SidebarFooter", "SidebarMenu", "SidebarGroup", "SidebarMenuItem", "SidebarToggleButton", "TitleBar", "Tab", "DataTable"].contains(&tag_str.as_str()) {
+    if tag_str.chars().next().is_some_and(|c| c.is_ascii_uppercase()) && !has_base && !["Resizable", "ResizablePanel", "Sidebar", "SidebarHeader", "SidebarFooter", "SidebarMenu", "SidebarGroup", "SidebarMenuItem", "SidebarToggleButton", "TitleBar", "Tab", "DataTable", "DropdownButton"].contains(&tag_str.as_str()) {
         let attr_pairs: Vec<(&syn::Ident, &syn::Expr)> = element
             .attributes
             .iter()
@@ -244,8 +259,9 @@ fn generate_element_checked(
     let mut canvas_prepaint = None;
     let mut canvas_paint = None;
     let mut has_styled = false;
-    let is_component = tag_str.chars().next().map_or(false, |c| c.is_ascii_uppercase()) && !["Resizable", "ResizablePanel", "Sidebar", "SidebarHeader", "SidebarFooter", "SidebarMenu", "SidebarGroup", "SidebarMenuItem", "SidebarToggleButton", "TitleBar", "Tab", "DataTable"].contains(&tag_str.as_str());
+    let is_component = tag_str.chars().next().map_or(false, |c| c.is_ascii_uppercase()) && !["Resizable", "ResizablePanel", "Sidebar", "SidebarHeader", "SidebarFooter", "SidebarMenu", "SidebarGroup", "SidebarMenuItem", "SidebarToggleButton", "TitleBar", "Tab", "DataTable", "DropdownButton"].contains(&tag_str.as_str());
     let mut needs_id = false;
+    let mut inherited_classes = Vec::new();
 
     // Pre-allocate method chain capacity:
     // - Multiply each attribute by 2 (class attribute expands to 3-4 methods on average, other attributes to 1)
@@ -330,6 +346,35 @@ fn generate_element_checked(
                 has_styled = true;
             }
             _ => {
+                if let RsxAttribute::Value { name, value } = attr {
+                    if name == "class" {
+                        if let syn::Expr::Lit(syn::ExprLit { lit: syn::Lit::Str(lit_str), .. }) = value {
+                            let class_str = lit_str.value();
+                            let mut regular_classes = Vec::new();
+                            for token in class_str.split_ascii_whitespace() {
+                                if let Some(stripped) = token.strip_prefix("*:") {
+                                    inherited_classes.push(stripped.to_string());
+                                } else {
+                                    regular_classes.push(token);
+                                }
+                            }
+                            if !inherited_classes.is_empty() {
+                                let new_class_str = regular_classes.join(" ");
+                                let new_lit_str = syn::LitStr::new(&new_class_str, lit_str.span());
+                                let new_attr = RsxAttribute::Value {
+                                    name: name.clone(),
+                                    value: syn::Expr::Lit(syn::ExprLit {
+                                        attrs: Vec::new(),
+                                        lit: syn::Lit::Str(new_lit_str),
+                                    }),
+                                };
+                                let analysis = analyze_attr(&new_attr);
+                                generate_attr_methods_with_mode(&new_attr, analysis.hints(), &mut methods, mode);
+                                continue;
+                            }
+                        }
+                    }
+                }
                 let analysis = analyze_attr(attr);
                 if !needs_id && analysis.needs_id && !is_component {
                     needs_id = true;
@@ -388,7 +433,7 @@ fn generate_element_checked(
         quote! { gpui_kit::component::tab::Tab::new() }
     } else if tag_str == "DataTable" {
         let Some(state) = table_state else {
-            return Err(syn::Error::new_spanned(&element.name, "Element <DataTable> requires a state attribute.").to_compile_error().into());
+            return crate::codegen::data_table_parser::parse_data_table(element);
         };
         needs_id = false;
         quote! { gpui_kit::component::table::DataTable::new(#state) }
@@ -456,7 +501,7 @@ fn generate_element_checked(
         quote! { gpui_kit::component::table::TableCell::new() }
     } else if tag_str == "caption" || tag_str == "table_caption" {
         quote! { gpui_kit::component::table::TableCaption::new() }
-    } else if tag_str == "button" || tag_str == "button_group" {
+    } else if tag_str == "button" || tag_str == "button_group" || tag_str == "DropdownButton" {
         let btn_id = if let Some(id_value) = user_id {
             quote! { #id_value }
         } else if let Some(key_expr) = user_key {
@@ -469,8 +514,10 @@ fn generate_element_checked(
         user_key = None;
         if tag_str == "button" {
             quote! { gpui_kit::component::button::Button::new(#btn_id) }
-        } else {
+        } else if tag_str == "button_group" {
             quote! { gpui_kit::component::button::ButtonGroup::new(#btn_id) }
+        } else {
+            quote! { gpui_kit::component::button::DropdownButton::new(#btn_id) }
         }
     } else if let Some(base) = base_expr {
         quote! { #base }
@@ -512,8 +559,22 @@ fn generate_element_checked(
             Vec::new()
         };
 
+    if tag_str == "Resizable" {
+        for child in &element.children {
+            if let crate::parser::RsxNode::Element(child_elem) = child {
+                let child_name = child_elem.name.to_string();
+                if child_name != "ResizablePanel" {
+                    return Err(syn::Error::new_spanned(
+                        &child_elem.name,
+                        format!("`<Resizable>` can only contain `<ResizablePanel>` children, but found `<{}>`", child_name)
+                    ).into_compile_error());
+                }
+            }
+        }
+    }
+
     // Child nodes → .child() / .children() calls (including aggregation optimization)
-    generate_children_methods(&element.children, require_loop_key, &mut methods, mode)?;
+    generate_children_methods(&element.children, require_loop_key, &mut methods, mode, &inherited_classes)?;
 
     Ok(quote! { #base #(#default_methods)* #(#methods)* })
 }
@@ -524,14 +585,15 @@ fn generate_children_methods(
     require_loop_key: bool,
     methods: &mut Vec<TokenStream>,
     mode: ClassMode,
+    inherited_classes: &[String],
 ) -> Result<(), TokenStream> {
     for node in children {
         match node {
             RsxNode::Expr(expr) => {
                 methods.push(quote! { .child(#expr) });
             }
-            RsxNode::Element(elem) => {
-                let child_expr = generate_element_checked(elem, require_loop_key, mode)?;
+            RsxNode::Element(_) => {
+                let child_expr = generate_node_checked(node, require_loop_key, mode, inherited_classes)?;
                 methods.push(quote! { .child(#child_expr) });
             }
             RsxNode::Spread(expr) => {
@@ -542,7 +604,7 @@ fn generate_children_methods(
                 iter,
                 body,
             } => {
-                let for_expr = generate_for_loop_checked(binding, iter, body, mode)?;
+                let for_expr = generate_for_loop_checked(binding, iter, body, mode, inherited_classes)?;
                 methods.push(quote! { .children(#for_expr) });
             }
         }

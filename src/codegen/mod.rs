@@ -19,3 +19,4 @@ pub(crate) mod class;
 pub(crate) mod element;
 pub(crate) mod runtime;
 pub(crate) mod tables;
+pub mod data_table_parser;
