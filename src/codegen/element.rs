@@ -352,6 +352,9 @@ fn generate_element_checked(
                             let class_str = lit_str.value();
                             let mut regular_classes = Vec::new();
                             for token in class_str.split_ascii_whitespace() {
+                                if tag_str == "button" && (token.contains("hover:") || token.contains("active:")) {
+                                    return Err(syn::Error::new(value.span(), "hover: and active: classes are not allowed on zopra button elements because they panic with 'style already set' internally. Use a <div on_click=...> to add custom styles, or remove the class to rely on default button styling.").to_compile_error());
+                                }
                                 if let Some(stripped) = token.strip_prefix("*:") {
                                     inherited_classes.push(stripped.to_string());
                                 } else {
@@ -373,6 +376,10 @@ fn generate_element_checked(
                                 continue;
                             }
                         }
+                    }
+                } else if let RsxAttribute::StateClass { method, class_lit } = attr {
+                    if tag_str == "button" && (method.to_string() == "hover" || method.to_string() == "active") {
+                        return Err(syn::Error::new(class_lit.span(), "hoverClass and activeClass are not allowed on zopra button elements because they panic with 'style already set' internally. Use a <div on_click=...> to add custom styles, or remove them to rely on default button styling.").to_compile_error());
                     }
                 }
                 let analysis = analyze_attr(attr);
@@ -629,12 +636,7 @@ fn generate_component_call(
         .to_compile_error());
     }
 
-    let props_ident = {
-        let ident = name.as_single_ident().unwrap();
-        let mut s = ident.to_string();
-        s.push_str("Props");
-        proc_macro2::Ident::new(&s, ident.span())
-    };
+    let props_ident = name.as_single_ident().unwrap().clone();
 
     let mut setters = TokenStream::new();
     for (attr_name, expr) in attrs {
@@ -647,27 +649,42 @@ fn generate_component_call(
     let children_setter = if children.is_empty() {
         TokenStream::new()
     } else {
-        let child_exprs: Vec<TokenStream> = children
-            .iter()
-            .map(|node| match node {
-                RsxNode::Element(elem) => {
-                    generate_element_checked(elem, false, ClassMode::Permissive)
-                }
-                RsxNode::Expr(expr) => Ok(quote! { #expr }),
-                RsxNode::Spread(expr) => Err(syn::Error::new(
-                    expr.span(),
-                    "spread syntax is not supported in component children",
-                )
-                .to_compile_error()),
-                RsxNode::For { .. } => Err(syn::Error::new(
-                    name.span(),
-                    "for-loop children are not supported in component tags yet",
-                )
-                .to_compile_error()),
-            })
-            .collect::<Result<Vec<_>, _>>()?;
-        quote! { .children(vec![#(#child_exprs),*]) }
+        let _ = children;
+        return Err(syn::Error::new(
+            name.span(),
+            format!(
+                "component tag `<{}>` cannot take children: zopra component props are attributes only.\\n\
+                 \x20 help: pass the content as a prop instead, or wrap the tag: `<div><{} /></div>`",
+                name, name
+            ),
+        )
+        .to_compile_error());
     };
+
+    if let Some(ident) = name.as_single_ident() {
+        let raw = ident.to_string();
+        let first = raw.chars().next().unwrap_or('a');
+        if first.is_ascii_lowercase() && !attrs.is_empty() {
+            let capitalized: String = raw
+                .split('_')
+                .map(|part| {
+                    let mut chars = part.chars();
+                    match chars.next() {
+                        Some(c) => c.to_uppercase().collect::<String>() + chars.as_str(),
+                        None => String::new(),
+                    }
+                })
+                .collect();
+            return Err(syn::Error::new(
+                name.span(),
+                format!(
+                    "tag `<{raw}>` was treated as a plain element, so `{raw}()` was called without arguments.\\n\
+                     \x20 help: component tags must be capitalized: did you mean `<{capitalized} ... />`?"
+                ),
+            )
+            .to_compile_error());
+        }
+    }
 
     let loc = name.span().start();
     let (line, column) = (loc.line as u64, loc.column as u64);
@@ -717,7 +734,7 @@ fn generate_tag(
                 )
                 .to_compile_error());
             };
-            quote! { img(#source) }
+            quote! { gpui_kit::img(#source) }
         }
         "canvas" => {
             let Some(prepaint) = canvas_prepaint else {
@@ -738,13 +755,13 @@ fn generate_tag(
                 )
                 .to_compile_error());
             };
-            quote! { canvas(#prepaint, #paint) }
+            quote! { gpui_kit::canvas(#prepaint, #paint) }
         }
         // HTML tags: uniformly mapped to div()
         "div" | "span" | "section" | "article" | "header" | "footer" | "main" | "nav" | "aside"
         | "h1" | "h2" | "h3" | "h4" | "h5" | "h6" | "p" | "label" | "a" | "input"
         | "textarea" | "select" | "form" | "ul" | "ol" | "li" | "kbd" | "Activity" => {
-            quote! { div() }
+            quote! { gpui_kit::div() }
         }
         _ => quote! { #path() },
     })
@@ -882,3 +899,4 @@ mod tests {
         assert_eq!(static_key_suffix(&non_integer_negative), None);
     }
 }
+

@@ -319,25 +319,25 @@ fn generate_color_fallback_code() -> TokenStream {
             && let Some((color, is_rgba)) = __rsx_parse_color(rest)
         {
             if is_rgba {
-                return el.text_color(rgba(color));
+                return el.text_color(gpui_kit::rgba(color));
             }
-            return el.text_color(rgb(color));
+            return el.text_color(gpui_kit::rgb(color));
         }
         if let Some(rest) = class.strip_prefix("bg-")
             && let Some((color, is_rgba)) = __rsx_parse_color(rest)
         {
             if is_rgba {
-                return el.bg(rgba(color));
+                return el.bg(gpui_kit::rgba(color));
             }
-            return el.bg(rgb(color));
+            return el.bg(gpui_kit::rgb(color));
         }
         if let Some(rest) = class.strip_prefix("border-")
             && let Some((color, is_rgba)) = __rsx_parse_color(rest)
         {
             if is_rgba {
-                return el.border_color(rgba(color));
+                return el.border_color(gpui_kit::rgba(color));
             }
-            return el.border_color(rgb(color));
+            return el.border_color(gpui_kit::rgb(color));
         }
     }
 }
@@ -408,7 +408,7 @@ fn generate_length_fallback(spec: &super::tables::LengthClassSpec) -> TokenStrea
         quote! {
             if let Some(raw) = inner.strip_suffix('%') {
                 if let Ok(n) = raw.parse::<f32>().__rsx_finite() {
-                    return el.#method(relative(n / 100.0));
+                    return el.#method(gpui_kit::relative(n / 100.0));
                 }
             }
         }
@@ -423,7 +423,7 @@ fn generate_length_fallback(spec: &super::tables::LengthClassSpec) -> TokenStrea
                     den.parse::<f32>().__rsx_finite(),
                 ) {
                     if den > 0.0 {
-                        return el.#method(relative(num / den));
+                        return el.#method(gpui_kit::relative(num / den));
                     }
                 }
             }
@@ -437,12 +437,12 @@ fn generate_length_fallback(spec: &super::tables::LengthClassSpec) -> TokenStrea
             if let Some(inner) = rest.strip_prefix('[').and_then(|s| s.strip_suffix(']')) {
                 if let Some(raw) = inner.strip_suffix("px") {
                     if let Ok(n) = raw.parse::<f32>().__rsx_finite() {
-                        return el.#method(px(n));
+                        return el.#method(gpui_kit::px(n));
                     }
                 }
                 if let Some(raw) = inner.strip_suffix("rem") {
                     if let Ok(n) = raw.parse::<f32>().__rsx_finite() {
-                        return el.#method(rems(n));
+                        return el.#method(gpui_kit::rems(n));
                     }
                 }
                 #percent

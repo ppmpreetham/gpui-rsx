@@ -181,7 +181,22 @@ impl Parse for RsxElement {
                 } else if attr_name == "whiteSpace" {
                     return Err(unsupported_jsx_attribute_error(&attr_name));
                 } else if attr_name == "when" {
-                    let (first, second) = parse_condition_tuple(value, "when")?;
+                    let (first, second) = if let Expr::Tuple(tuple) = &value {
+                        if tuple.elems.len() == 2 {
+                            let mut iter = tuple.elems.iter();
+                            (iter.next().unwrap().clone(), iter.next().unwrap().clone())
+                        } else {
+                            return Err(condition_tuple_wrong_count_error(
+                                &value,
+                                "when",
+                                tuple.elems.len(),
+                            ));
+                        }
+                    } else {
+                        let condition = value;
+                        let closure: Expr = syn::parse_quote!(|__el| __el);
+                        (condition, closure)
+                    };
                     attributes.push(RsxAttribute::When {
                         condition: first,
                         closure: second,
@@ -289,6 +304,17 @@ fn parse_children(
                 Some(name) => unclosed_tag_error(input.span(), &name.to_string()),
                 None => unclosed_fragment_error(input.span()),
             });
+        }
+
+        if input.peek(Token![<]) && input.peek2(Token![>]) {
+            input.parse::<Token![<]>()?;
+            input.parse::<Token![>]>()?;
+            let nested = parse_children(input, None)?;
+            input.parse::<Token![<]>()?;
+            input.parse::<Token![/]>()?;
+            input.parse::<Token![>]>()?;
+            children.extend(nested);
+            continue;
         }
 
         if let Some(node) = try_parse_child_node(input)? {
