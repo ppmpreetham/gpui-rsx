@@ -334,7 +334,10 @@ fn generate_element_checked(
                 if matches!(value, syn::Expr::Closure(_)) {
                     methods.push(quote! { .tooltip(#value) });
                 } else {
-                    methods.push(quote! { .tooltip(move |window, cx| gpui_kit::component::tooltip::Tooltip::new(#value).build(window, cx)) });
+                    methods.push(quote! { .tooltip({
+                        let __t: gpui_kit::SharedString = (#value).into();
+                        move |window, cx| gpui_kit::component::tooltip::Tooltip::new(__t.clone()).build(window, cx)
+                    }) });
                 }
             }
             RsxAttribute::Value { name, value } if name == "tooltip_with_action" => {
@@ -796,49 +799,12 @@ fn make_keyed_auto_id(tag_name: &RsxElementName, key_expr: &syn::Expr) -> TokenS
     let loc = span.start();
     // Compile-time constant prefix containing file path + source location, formatted as:
     //   "src/views/list.rs::__rsx_li_L42C8_"
-    let prefix_suffix = format!("::__rsx_{}_L{}C{}_", tag_name, loc.line, loc.column);
-    if let Some(static_suffix) = static_key_suffix(key_expr) {
-        return quote! { concat!(file!(), #prefix_suffix, #static_suffix) };
-    }
-    // Append key to prefix at runtime, producing e.g.:
-    //   "src/views/list.rs::__rsx_li_L42C8_item_42"
-    quote! { format!(concat!(file!(), #prefix_suffix, "{}"), #key_expr) }
-}
-
-fn static_key_suffix(expr: &syn::Expr) -> Option<String> {
-    match expr {
-        syn::Expr::Lit(syn::ExprLit {
-            lit: syn::Lit::Str(lit),
-            ..
-        }) => Some(lit.value()),
-        syn::Expr::Lit(syn::ExprLit {
-            lit: syn::Lit::Int(lit),
-            ..
-        }) => lit
-            .base10_parse::<u128>()
-            .ok()
-            .map(|value| value.to_string()),
-        syn::Expr::Lit(syn::ExprLit {
-            lit: syn::Lit::Bool(lit),
-            ..
-        }) => Some(lit.value.to_string()),
-        syn::Expr::Lit(syn::ExprLit {
-            lit: syn::Lit::Char(lit),
-            ..
-        }) => Some(lit.value().to_string()),
-        syn::Expr::Unary(unary) if matches!(unary.op, syn::UnOp::Neg(_)) => match &*unary.expr {
-            syn::Expr::Lit(syn::ExprLit {
-                lit: syn::Lit::Int(lit),
-                ..
-            }) => lit
-                .base10_parse::<u128>()
-                .ok()
-                .map(|value| format!("-{value}")),
-            _ => None,
-        },
-        syn::Expr::Paren(expr) => static_key_suffix(&expr.expr),
-        syn::Expr::Group(expr) => static_key_suffix(&expr.expr),
-        _ => None,
+    let prefix = format!("::__rsx_{}_L{}C{}", tag_name, loc.line, loc.column);
+    quote! {
+        gpui_kit::ElementId::NamedInteger(
+            gpui_kit::SharedString::new_static(concat!(file!(), #prefix)),
+            zopra::utils::key_hash(&(#key_expr)),
+        )
     }
 }
 
@@ -874,29 +840,5 @@ mod tests {
         assert!(missing_paint.contains("Element `<canvas>` requires `paint`"));
     }
 
-    #[test]
-    fn static_key_suffix_supports_literal_display_types() {
-        let cases: [(syn::Expr, &str); 6] = [
-            (syn::parse_quote!("item"), "item"),
-            (syn::parse_quote!(42), "42"),
-            (syn::parse_quote!(true), "true"),
-            (syn::parse_quote!('x'), "x"),
-            (syn::parse_quote!(-7), "-7"),
-            (syn::parse_quote!((9)), "9"),
-        ];
-
-        for (expr, expected) in cases {
-            assert_eq!(static_key_suffix(&expr).as_deref(), Some(expected));
-        }
-    }
-
-    #[test]
-    fn static_key_suffix_keeps_dynamic_values_at_runtime() {
-        let dynamic: syn::Expr = syn::parse_quote!(item.id);
-        let non_integer_negative: syn::Expr = syn::parse_quote!(-1.5);
-
-        assert_eq!(static_key_suffix(&dynamic), None);
-        assert_eq!(static_key_suffix(&non_integer_negative), None);
-    }
 }
 

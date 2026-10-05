@@ -70,13 +70,81 @@ pub fn parse_data_table(element: &RsxElement) -> Result<TokenStream, TokenStream
     }
 
     let tbody_el = element.children.iter().find_map(|c| as_element(c, "tbody"));
+    let col_els: Vec<&RsxElement> = element.children.iter().filter_map(|c| as_element(c, "Col")).collect();
+
     let items = tbody_el
         .and_then(|el| get_attr_value(&el.attributes, "items"))
-        .ok_or_else(|| syn::Error::new(element.name.span(), "<tbody> requires `items` attribute").to_compile_error())?;
+        .or_else(|| get_attr_value(&element.attributes, "rows"))
+        .ok_or_else(|| syn::Error::new(element.name.span(), "<tbody> requires `items` attribute (or use <Col> columns with a `rows` attribute on <DataTable>)").to_compile_error())?;
+
+    let items_expr = quote! {
+        zopra::components::declarative_table::IntoRows::into_rows(#items)
+    };
 
     let mut row_ident = quote! { _item };
     let mut tr_delegate_methods = Vec::new();
     let mut match_arms = Vec::new();
+    let mut sorters: Vec<TokenStream> = Vec::new();
+
+    if !col_els.is_empty() {
+        let col = col_els[0];
+        let accessor = get_attr_value(&col.attributes, "r")
+            .ok_or_else(|| syn::Error::new(col.name.span(), "<Col> requires an `r` accessor: r={|row| row.field}").to_compile_error())?;
+        if let syn::Expr::Closure(c) = accessor
+            && let Some(arg) = c.inputs.first()
+        {
+            row_ident = quote! { #arg };
+        }
+    }
+
+    for (ix, col) in col_els.iter().enumerate() {
+        let accessor = get_attr_value(&col.attributes, "r")
+            .ok_or_else(|| syn::Error::new(col.name.span(), "<Col> requires an `r` accessor: r={|row| row.field}").to_compile_error())?;
+        let title = get_attr_value(&col.attributes, "title")
+            .map(|e| quote! { #e })
+            .unwrap_or_else(|| quote! { "" });
+        let key = get_attr_value(&col.attributes, "id")
+            .map(|e| quote! { #e })
+            .unwrap_or_else(|| {
+                let k = format!("col{ix}");
+                quote! { #k }
+            });
+
+        let mut col_methods = Vec::new();
+        let mut sortable = false;
+        for attr in &col.attributes {
+            match attr {
+                RsxAttribute::Value { name, value } if name.to_string() != "r" && name.to_string() != "title" && name.to_string() != "id" => {
+                    col_methods.push(quote! { .#name(#value) });
+                }
+                RsxAttribute::Flag(name) => {
+                    if name.to_string() == "sortable" {
+                        sortable = true;
+                    }
+                    col_methods.push(quote! { .#name() });
+                }
+                _ => {}
+            }
+        }
+
+        columns.push(quote! {
+            gpui_kit::component::table::Column::new(#key, #title)
+                #( #col_methods )*
+        });
+
+        let cell = quote! { {
+            let __zopra_cell_val = zopra::components::declarative_table::col_cell(#accessor, #row_ident);
+            gpui_kit::component::table::TableCell::new().p_0().h_full().child(__zopra_cell_val)
+        } };
+        match_arms.push(quote! { #key => { #cell.into_any_element() } });
+
+        let sorter_expr = if sortable {
+            quote! { Some(zopra::components::declarative_table::col_sorter(#accessor, __zopra_rows.as_slice())) }
+        } else {
+            quote! { None }
+        };
+        sorters.push(sorter_expr);
+    }
 
     if let Some(tbody_el) = tbody_el {
         let closure = tbody_el.children.iter().find_map(|c| {
@@ -192,20 +260,29 @@ pub fn parse_data_table(element: &RsxElement) -> Result<TokenStream, TokenStream
 
     let delegate_attrs = ["on_sort", "on_context_menu", "on_lazy_load", "group_headers"];
     let state_attrs = ["row_selectable", "cell_selectable", "col_selectable", "loop_selection", "row_header", "sortable"];
+    let skip_attrs: &[&str] = if tbody_el.is_some() { &[] } else { &["rows"] };
 
-    let (delegate_methods, state_methods, table_methods) = element.attributes.iter().fold(
-        (tr_delegate_methods, Vec::new(), Vec::new()),
-        |(mut del, mut state, mut tab), attr| {
+    let (delegate_methods, state_methods, table_methods, event_handlers) = element.attributes.iter().fold(
+        (tr_delegate_methods, Vec::new(), Vec::new(), Vec::new()),
+        |(mut del, mut state, mut tab, mut events), attr| {
             match attr {
                 RsxAttribute::Value { name, value } => {
                     let name_str = name.to_string();
-                    if delegate_attrs.contains(&name_str.as_str()) {
+                    if skip_attrs.contains(&name_str.as_str()) {
+                    } else if delegate_attrs.contains(&name_str.as_str()) {
                         del.push(quote! { .#name(#value) });
                     } else if state_attrs.contains(&name_str.as_str()) {
                         state.push(quote! { .#name(#value) });
                     } else {
                         let mapped_event = match name_str.as_str() {
-                            "on_select_row" => Some(quote! { .on_select_row(#value) }),
+                            "on_select_row" => Some(quote! {
+                                let __zopra_on_select_row: Box<dyn Fn(usize, &mut gpui_kit::App)> = Box::new(#value);
+                                zopra::hooks::use_event(&_state, move |event, cx| {
+                                    if let gpui_kit::component::table::TableEvent::SelectRow(ix) = event {
+                                        __zopra_on_select_row(*ix, cx);
+                                    }
+                                }, cx);
+                            }),
                             "on_double_click_row" => Some(quote! { .on_double_click_row(#value) }),
                             "on_right_click_row" => Some(quote! { .on_right_click_row(#value) }),
                             "on_select_cell" => Some(quote! { .on_select_cell(#value) }),
@@ -216,7 +293,9 @@ pub fn parse_data_table(element: &RsxElement) -> Result<TokenStream, TokenStream
                             "on_column_widths_changed" => Some(quote! { .on_column_widths_changed(#value) }),
                             _ => None,
                         };
-                        if let Some(event) = mapped_event {
+                        if name_str.as_str() == "on_select_row" {
+                            events.push(mapped_event.unwrap());
+                        } else if let Some(event) = mapped_event {
                             tab.push(event);
                         } else {
                             tab.push(quote! { .#name(#value) });
@@ -235,36 +314,50 @@ pub fn parse_data_table(element: &RsxElement) -> Result<TokenStream, TokenStream
                 },
                 _ => {}
             }
-            (del, state, tab)
+            (del, state, tab, events)
         }
     );
 
     let group_headers_method = (!group_headers.is_empty())
         .then(|| quote! { .group_headers(vec![ #( #group_headers ),* ]) });
 
+    let sorters_method = (!sorters.is_empty())
+        .then(|| quote! { .sorters(vec![ #( #sorters ),* ]) });
+
     // 4. Output final AST
     Ok(quote! {
         {
-            let _delegate = zopra::components::declarative_table::DeclarativeTableDelegate::new(
-                #items,
-                vec![ #( #columns ),* ],
-                |#row_ident, col_id, _window, _cx| {
-                    use gpui_kit::IntoElement;
-                    match col_id {
-                        #( #match_arms )*
-                        _ => gpui_kit::component::table::TableCell::new().into_any_element(),
-                    }
-                }
-            )
-            #group_headers_method
-            #( #delegate_methods )*;
-
+            let __zopra_rows = #items_expr;
             let _state = zopra::hooks::use_table_with(
-                || _delegate,
+                || {
+                    let _delegate = zopra::components::declarative_table::DeclarativeTableDelegate::new(
+                        __zopra_rows.clone(),
+                        vec![ #( #columns ),* ],
+                        |#row_ident, col_id, _window, _cx| {
+                            use gpui_kit::IntoElement;
+                            match col_id {
+                                #( #match_arms )*
+                                _ => gpui_kit::component::table::TableCell::new().into_any_element(),
+                            }
+                        }
+                    )
+                    #group_headers_method
+                    #sorters_method
+                    #( #delegate_methods )*;
+                    _delegate
+                },
                 |state| state #( #state_methods )*,
                 window,
                 cx
             );
+
+            _state.update(cx, |state, cx| {
+                if state.delegate_mut().update_data(&__zopra_rows) {
+                    cx.notify();
+                }
+            });
+
+            #( #event_handlers )*
 
             gpui_kit::component::table::DataTable::new(&_state)
             #( #table_methods )*
