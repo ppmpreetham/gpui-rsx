@@ -5,7 +5,7 @@
 //!
 //! Optimization: Use thread_local to cache the complete helper source code, avoiding repeated generation and segmented parsing for multiple dynamic classes.
 
-use super::class::{ClassMode, parse_single_class_with_mode};
+use super::class::{ClassMode, chain, parse_single_class_with_mode};
 use super::tables::{
     COLOR_FAMILIES, COLOR_SHADES, LENGTH_CLASS_SPECS, dynamic_common_classes, lookup_color,
 };
@@ -78,11 +78,11 @@ fn get_cached_dynamic_class_helper(mode: ClassMode) -> TokenStream {
 ///     fn __rsx_apply_class<E: Styled>(el: E, class: &str) -> E {
 ///         match class {
 ///             "flex" => el.flex(),
-///             "gap-4" => el.gap(px(4.0)),
+///             "gap-4" => el.gap(rems(1.0)),
 ///             _ => {
 ///                 // Numeric prefix fallback: handle arbitrary numeric values (gap-7, p-5, etc.)
 ///                 if let Some(rest) = class.strip_prefix("gap-") {
-///                     if let Ok(n) = rest.parse::<f32>() { return el.gap(px(n)); }
+///                     if let Ok(n) = rest.parse::<f32>() { return el.gap(rems(n * 0.25)); }
 ///                 }
 ///                 // ... remaining prefixes ...
 ///                 el
@@ -449,7 +449,7 @@ fn generate_length_fallback(spec: &super::tables::LengthClassSpec) -> TokenStrea
             }
             #fraction
             if let Ok(n) = rest.parse::<f32>().__rsx_finite() {
-                return el.#method(rems(n * 0.25));
+                return el.#method(gpui_kit::rems(n * 0.25));
             }
         }
     }
@@ -497,8 +497,7 @@ fn parse_dynamic_common_class(class: &str) -> TokenStream {
             }
         },
         _ => {
-            let method_call = parse_single_class_with_mode(class, ClassMode::Permissive);
-            quote! { el #method_call }
+            chain(quote! { el }, [parse_single_class_with_mode(class, ClassMode::Permissive)])
         }
     }
 }

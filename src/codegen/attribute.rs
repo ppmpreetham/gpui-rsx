@@ -11,7 +11,7 @@
 //! - Use match-based `lookup_attr_method()` instead of double linear scan
 //! - Push directly to caller Vec to avoid intermediate Vec allocations
 
-use super::class::{ClassMode, parse_class_string_with_mode};
+use super::class::{ClassMode, chain, parse_class_string_with_mode};
 use super::runtime::generate_dynamic_class_code_with_mode;
 use super::tables::{is_stateful_class, lookup_attr_flag_method, lookup_attr_method_info};
 use crate::parser::RsxAttribute;
@@ -154,16 +154,16 @@ pub(crate) fn generate_attr_methods_with_mode(
             class_lit,
         } => {
             let class_str = class_lit.value();
-            let class_methods: Vec<_> = parse_class_string_with_mode(&class_str, mode).collect();
-            out.push(quote! { .when(#condition, |__el| __el #(#class_methods)* ) });
+            let el = chain(quote! { __el }, parse_class_string_with_mode(&class_str, mode));
+            out.push(quote! { .when(#condition, |__el| #el) });
         }
 
         // GPUI state-style helpers. These methods receive StyleRefinement, which implements
         // Styled in real GPUI, so the same static class expansion can be reused here.
         RsxAttribute::StateClass { method, class_lit } => {
             let class_str = class_lit.value();
-            let class_methods: Vec<_> = parse_class_string_with_mode(&class_str, mode).collect();
-            out.push(quote! { .#method(|__style| __style #(#class_methods)* ) });
+            let style = chain(quote! { __style }, parse_class_string_with_mode(&class_str, mode));
+            out.push(quote! { .#method(|__style| #style) });
         }
     }
 }
@@ -214,8 +214,7 @@ fn generate_static_class_expr_code(expr: &syn::Expr, mode: ClassMode) -> Option<
             ..
         }) => {
             let class_str = lit_str.value();
-            let methods: Vec<_> = parse_class_string_with_mode(&class_str, mode).collect();
-            Some(quote! { __el #(#methods)* })
+            Some(chain(quote! { __el }, parse_class_string_with_mode(&class_str, mode)))
         }
         syn::Expr::Paren(expr) => generate_static_class_expr_code(&expr.expr, mode),
         syn::Expr::Group(expr) => generate_static_class_expr_code(&expr.expr, mode),

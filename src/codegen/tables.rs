@@ -9,271 +9,320 @@
 ///
 /// Complete Tailwind palette; compiler generates efficient jump tables/tries for match.
 pub(crate) fn lookup_color(name: &str) -> Option<u32> {
+    // Tailwind v4.2 palette: theme.css OKLCH values converted to sRGB (out-of-gamut channels clipped)
     match name {
+        // red
+        "red_50" => Some(0xfef2f2),
+        "red_100" => Some(0xffe2e2),
+        "red_200" => Some(0xffc9c9),
+        "red_300" => Some(0xffa2a2),
+        "red_400" => Some(0xff6467),
+        "red_500" => Some(0xfb2c36),
+        "red_600" => Some(0xe7000b),
+        "red_700" => Some(0xc10007),
+        "red_800" => Some(0x9f0712),
+        "red_900" => Some(0x82181a),
+        "red_950" => Some(0x460809),
+        // orange
+        "orange_50" => Some(0xfff7ed),
+        "orange_100" => Some(0xffedd4),
+        "orange_200" => Some(0xffd6a7),
+        "orange_300" => Some(0xffb86a),
+        "orange_400" => Some(0xff8904),
+        "orange_500" => Some(0xff6900),
+        "orange_600" => Some(0xf54900),
+        "orange_700" => Some(0xca3500),
+        "orange_800" => Some(0x9f2d00),
+        "orange_900" => Some(0x7e2a0c),
+        "orange_950" => Some(0x441306),
         // amber
         "amber_50" => Some(0xfffbeb),
-        "amber_100" => Some(0xfef3c7),
-        "amber_200" => Some(0xfde68a),
-        "amber_300" => Some(0xfcd34d),
-        "amber_400" => Some(0xfbbf24),
-        "amber_500" => Some(0xf59e0b),
-        "amber_600" => Some(0xd97706),
-        "amber_700" => Some(0xb45309),
-        "amber_800" => Some(0x92400e),
-        "amber_900" => Some(0x78350f),
-        "amber_950" => Some(0x451a03),
+        "amber_100" => Some(0xfef3c6),
+        "amber_200" => Some(0xfee685),
+        "amber_300" => Some(0xffd230),
+        "amber_400" => Some(0xffb900),
+        "amber_500" => Some(0xfe9a00),
+        "amber_600" => Some(0xe17100),
+        "amber_700" => Some(0xbb4d00),
+        "amber_800" => Some(0x973c00),
+        "amber_900" => Some(0x7b3306),
+        "amber_950" => Some(0x461901),
+        // yellow
+        "yellow_50" => Some(0xfefce8),
+        "yellow_100" => Some(0xfef9c2),
+        "yellow_200" => Some(0xfff085),
+        "yellow_300" => Some(0xffdf20),
+        "yellow_400" => Some(0xfdc700),
+        "yellow_500" => Some(0xf0b100),
+        "yellow_600" => Some(0xd08700),
+        "yellow_700" => Some(0xa65f00),
+        "yellow_800" => Some(0x894b00),
+        "yellow_900" => Some(0x733e0a),
+        "yellow_950" => Some(0x432004),
+        // lime
+        "lime_50" => Some(0xf7fee7),
+        "lime_100" => Some(0xecfcca),
+        "lime_200" => Some(0xd8f999),
+        "lime_300" => Some(0xbbf451),
+        "lime_400" => Some(0x9ae600),
+        "lime_500" => Some(0x7ccf00),
+        "lime_600" => Some(0x5ea500),
+        "lime_700" => Some(0x497d00),
+        "lime_800" => Some(0x3c6300),
+        "lime_900" => Some(0x35530e),
+        "lime_950" => Some(0x192e03),
+        // green
+        "green_50" => Some(0xf0fdf4),
+        "green_100" => Some(0xdcfce7),
+        "green_200" => Some(0xb9f8cf),
+        "green_300" => Some(0x7bf1a8),
+        "green_400" => Some(0x05df72),
+        "green_500" => Some(0x00c950),
+        "green_600" => Some(0x00a63e),
+        "green_700" => Some(0x008236),
+        "green_800" => Some(0x016630),
+        "green_900" => Some(0x0d542b),
+        "green_950" => Some(0x032e15),
+        // emerald
+        "emerald_50" => Some(0xecfdf5),
+        "emerald_100" => Some(0xd0fae5),
+        "emerald_200" => Some(0xa4f4cf),
+        "emerald_300" => Some(0x5ee9b5),
+        "emerald_400" => Some(0x00d492),
+        "emerald_500" => Some(0x00bc7d),
+        "emerald_600" => Some(0x009966),
+        "emerald_700" => Some(0x007a55),
+        "emerald_800" => Some(0x006045),
+        "emerald_900" => Some(0x004f3b),
+        "emerald_950" => Some(0x002c22),
+        // teal
+        "teal_50" => Some(0xf0fdfa),
+        "teal_100" => Some(0xcbfbf1),
+        "teal_200" => Some(0x96f7e4),
+        "teal_300" => Some(0x46ecd5),
+        "teal_400" => Some(0x00d5be),
+        "teal_500" => Some(0x00bba7),
+        "teal_600" => Some(0x009689),
+        "teal_700" => Some(0x00786f),
+        "teal_800" => Some(0x005f5a),
+        "teal_900" => Some(0x0b4f4a),
+        "teal_950" => Some(0x022f2e),
+        // cyan
+        "cyan_50" => Some(0xecfeff),
+        "cyan_100" => Some(0xcefafe),
+        "cyan_200" => Some(0xa2f4fd),
+        "cyan_300" => Some(0x53eafd),
+        "cyan_400" => Some(0x00d3f2),
+        "cyan_500" => Some(0x00b8db),
+        "cyan_600" => Some(0x0092b8),
+        "cyan_700" => Some(0x007595),
+        "cyan_800" => Some(0x005f78),
+        "cyan_900" => Some(0x104e64),
+        "cyan_950" => Some(0x053345),
+        // sky
+        "sky_50" => Some(0xf0f9ff),
+        "sky_100" => Some(0xdff2fe),
+        "sky_200" => Some(0xb8e6fe),
+        "sky_300" => Some(0x74d4ff),
+        "sky_400" => Some(0x00bcff),
+        "sky_500" => Some(0x00a6f4),
+        "sky_600" => Some(0x0084d1),
+        "sky_700" => Some(0x0069a8),
+        "sky_800" => Some(0x00598a),
+        "sky_900" => Some(0x024a70),
+        "sky_950" => Some(0x052f4a),
         // blue
         "blue_50" => Some(0xeff6ff),
         "blue_100" => Some(0xdbeafe),
-        "blue_200" => Some(0xbfdbfe),
-        "blue_300" => Some(0x93c5fd),
-        "blue_400" => Some(0x60a5fa),
-        "blue_500" => Some(0x3b82f6),
-        "blue_600" => Some(0x2563eb),
-        "blue_700" => Some(0x1d4ed8),
-        "blue_800" => Some(0x1e40af),
-        "blue_900" => Some(0x1e3a8a),
-        "blue_950" => Some(0x172554),
-        // cyan
-        "cyan_50" => Some(0xecfeff),
-        "cyan_100" => Some(0xcffafe),
-        "cyan_200" => Some(0xa5f3fc),
-        "cyan_300" => Some(0x67e8f9),
-        "cyan_400" => Some(0x22d3ee),
-        "cyan_500" => Some(0x06b6d4),
-        "cyan_600" => Some(0x0891b2),
-        "cyan_700" => Some(0x0e7490),
-        "cyan_800" => Some(0x155e75),
-        "cyan_900" => Some(0x164e63),
-        "cyan_950" => Some(0x083344),
-        // emerald
-        "emerald_50" => Some(0xecfdf5),
-        "emerald_100" => Some(0xd1fae5),
-        "emerald_200" => Some(0xa7f3d0),
-        "emerald_300" => Some(0x6ee7b7),
-        "emerald_400" => Some(0x34d399),
-        "emerald_500" => Some(0x10b981),
-        "emerald_600" => Some(0x059669),
-        "emerald_700" => Some(0x047857),
-        "emerald_800" => Some(0x065f46),
-        "emerald_900" => Some(0x064e3b),
-        "emerald_950" => Some(0x022c22),
+        "blue_200" => Some(0xbedbff),
+        "blue_300" => Some(0x8ec5ff),
+        "blue_400" => Some(0x51a2ff),
+        "blue_500" => Some(0x2b7fff),
+        "blue_600" => Some(0x155dfc),
+        "blue_700" => Some(0x1447e6),
+        "blue_800" => Some(0x193cb8),
+        "blue_900" => Some(0x1c398e),
+        "blue_950" => Some(0x162456),
+        // indigo
+        "indigo_50" => Some(0xeef2ff),
+        "indigo_100" => Some(0xe0e7ff),
+        "indigo_200" => Some(0xc6d2ff),
+        "indigo_300" => Some(0xa3b3ff),
+        "indigo_400" => Some(0x7c86ff),
+        "indigo_500" => Some(0x615fff),
+        "indigo_600" => Some(0x4f39f6),
+        "indigo_700" => Some(0x432dd7),
+        "indigo_800" => Some(0x372aac),
+        "indigo_900" => Some(0x312c85),
+        "indigo_950" => Some(0x1e1a4d),
+        // violet
+        "violet_50" => Some(0xf5f3ff),
+        "violet_100" => Some(0xede9fe),
+        "violet_200" => Some(0xddd6ff),
+        "violet_300" => Some(0xc4b4ff),
+        "violet_400" => Some(0xa684ff),
+        "violet_500" => Some(0x8e51ff),
+        "violet_600" => Some(0x7f22fe),
+        "violet_700" => Some(0x7008e7),
+        "violet_800" => Some(0x5d0ec0),
+        "violet_900" => Some(0x4d179a),
+        "violet_950" => Some(0x2f0d68),
+        // purple
+        "purple_50" => Some(0xfaf5ff),
+        "purple_100" => Some(0xf3e8ff),
+        "purple_200" => Some(0xe9d4ff),
+        "purple_300" => Some(0xdab2ff),
+        "purple_400" => Some(0xc27aff),
+        "purple_500" => Some(0xad46ff),
+        "purple_600" => Some(0x9810fa),
+        "purple_700" => Some(0x8200db),
+        "purple_800" => Some(0x6e11b0),
+        "purple_900" => Some(0x59168b),
+        "purple_950" => Some(0x3c0366),
         // fuchsia
         "fuchsia_50" => Some(0xfdf4ff),
         "fuchsia_100" => Some(0xfae8ff),
-        "fuchsia_200" => Some(0xf5d0fe),
-        "fuchsia_300" => Some(0xf0abfc),
-        "fuchsia_400" => Some(0xe879f9),
-        "fuchsia_500" => Some(0xd946ef),
-        "fuchsia_600" => Some(0xc026d3),
-        "fuchsia_700" => Some(0xa21caf),
-        "fuchsia_800" => Some(0x86198f),
-        "fuchsia_900" => Some(0x701a75),
-        "fuchsia_950" => Some(0x4a044e),
+        "fuchsia_200" => Some(0xf6cfff),
+        "fuchsia_300" => Some(0xf4a8ff),
+        "fuchsia_400" => Some(0xed6aff),
+        "fuchsia_500" => Some(0xe12afb),
+        "fuchsia_600" => Some(0xc800de),
+        "fuchsia_700" => Some(0xa800b7),
+        "fuchsia_800" => Some(0x8a0194),
+        "fuchsia_900" => Some(0x721378),
+        "fuchsia_950" => Some(0x4b004f),
+        // pink
+        "pink_50" => Some(0xfdf2f8),
+        "pink_100" => Some(0xfce7f3),
+        "pink_200" => Some(0xfccee8),
+        "pink_300" => Some(0xfda5d5),
+        "pink_400" => Some(0xfb64b6),
+        "pink_500" => Some(0xf6339a),
+        "pink_600" => Some(0xe60076),
+        "pink_700" => Some(0xc6005c),
+        "pink_800" => Some(0xa3004c),
+        "pink_900" => Some(0x861043),
+        "pink_950" => Some(0x510424),
+        // rose
+        "rose_50" => Some(0xfff1f2),
+        "rose_100" => Some(0xffe4e6),
+        "rose_200" => Some(0xffccd3),
+        "rose_300" => Some(0xffa1ad),
+        "rose_400" => Some(0xff637e),
+        "rose_500" => Some(0xff2056),
+        "rose_600" => Some(0xec003f),
+        "rose_700" => Some(0xc70036),
+        "rose_800" => Some(0xa50036),
+        "rose_900" => Some(0x8b0836),
+        "rose_950" => Some(0x4d0218),
+        // slate
+        "slate_50" => Some(0xf8fafc),
+        "slate_100" => Some(0xf1f5f9),
+        "slate_200" => Some(0xe2e8f0),
+        "slate_300" => Some(0xcad5e2),
+        "slate_400" => Some(0x90a1b9),
+        "slate_500" => Some(0x62748e),
+        "slate_600" => Some(0x45556c),
+        "slate_700" => Some(0x314158),
+        "slate_800" => Some(0x1d293d),
+        "slate_900" => Some(0x0f172b),
+        "slate_950" => Some(0x020618),
         // gray
         "gray_50" => Some(0xf9fafb),
         "gray_100" => Some(0xf3f4f6),
         "gray_200" => Some(0xe5e7eb),
-        "gray_300" => Some(0xd1d5db),
-        "gray_400" => Some(0x9ca3af),
-        "gray_500" => Some(0x6b7280),
-        "gray_600" => Some(0x4b5563),
-        "gray_700" => Some(0x374151),
-        "gray_800" => Some(0x1f2937),
-        "gray_900" => Some(0x111827),
+        "gray_300" => Some(0xd1d5dc),
+        "gray_400" => Some(0x99a1af),
+        "gray_500" => Some(0x6a7282),
+        "gray_600" => Some(0x4a5565),
+        "gray_700" => Some(0x364153),
+        "gray_800" => Some(0x1e2939),
+        "gray_900" => Some(0x101828),
         "gray_950" => Some(0x030712),
-        // green
-        "green_50" => Some(0xf0fdf4),
-        "green_100" => Some(0xdcfce7),
-        "green_200" => Some(0xbbf7d0),
-        "green_300" => Some(0x86efac),
-        "green_400" => Some(0x4ade80),
-        "green_500" => Some(0x22c55e),
-        "green_600" => Some(0x16a34a),
-        "green_700" => Some(0x15803d),
-        "green_800" => Some(0x166534),
-        "green_900" => Some(0x14532d),
-        "green_950" => Some(0x052e16),
-        // indigo
-        "indigo_50" => Some(0xeef2ff),
-        "indigo_100" => Some(0xe0e7ff),
-        "indigo_200" => Some(0xc7d2fe),
-        "indigo_300" => Some(0xa5b4fc),
-        "indigo_400" => Some(0x818cf8),
-        "indigo_500" => Some(0x6366f1),
-        "indigo_600" => Some(0x4f46e5),
-        "indigo_700" => Some(0x4338ca),
-        "indigo_800" => Some(0x3730a3),
-        "indigo_900" => Some(0x312e81),
-        "indigo_950" => Some(0x1e1b4b),
-        // lime
-        "lime_50" => Some(0xf7fee7),
-        "lime_100" => Some(0xecfccb),
-        "lime_200" => Some(0xd9f99d),
-        "lime_300" => Some(0xbef264),
-        "lime_400" => Some(0xa3e635),
-        "lime_500" => Some(0x84cc16),
-        "lime_600" => Some(0x65a30d),
-        "lime_700" => Some(0x4d7c0f),
-        "lime_800" => Some(0x3f6212),
-        "lime_900" => Some(0x365314),
-        "lime_950" => Some(0x1a2e05),
+        // zinc
+        "zinc_50" => Some(0xfafafa),
+        "zinc_100" => Some(0xf4f4f5),
+        "zinc_200" => Some(0xe4e4e7),
+        "zinc_300" => Some(0xd4d4d8),
+        "zinc_400" => Some(0x9f9fa9),
+        "zinc_500" => Some(0x71717b),
+        "zinc_600" => Some(0x52525c),
+        "zinc_700" => Some(0x3f3f46),
+        "zinc_800" => Some(0x27272a),
+        "zinc_900" => Some(0x18181b),
+        "zinc_950" => Some(0x09090b),
         // neutral
         "neutral_50" => Some(0xfafafa),
         "neutral_100" => Some(0xf5f5f5),
         "neutral_200" => Some(0xe5e5e5),
         "neutral_300" => Some(0xd4d4d4),
-        "neutral_400" => Some(0xa3a3a3),
+        "neutral_400" => Some(0xa1a1a1),
         "neutral_500" => Some(0x737373),
         "neutral_600" => Some(0x525252),
         "neutral_700" => Some(0x404040),
         "neutral_800" => Some(0x262626),
         "neutral_900" => Some(0x171717),
         "neutral_950" => Some(0x0a0a0a),
-        // orange
-        "orange_50" => Some(0xfff7ed),
-        "orange_100" => Some(0xffedd5),
-        "orange_200" => Some(0xfed7aa),
-        "orange_300" => Some(0xfdba74),
-        "orange_400" => Some(0xfb923c),
-        "orange_500" => Some(0xf97316),
-        "orange_600" => Some(0xea580c),
-        "orange_700" => Some(0xc2410c),
-        "orange_800" => Some(0x9a3412),
-        "orange_900" => Some(0x7c2d12),
-        "orange_950" => Some(0x431407),
-        // pink
-        "pink_50" => Some(0xfdf2f8),
-        "pink_100" => Some(0xfce7f3),
-        "pink_200" => Some(0xfbcfe8),
-        "pink_300" => Some(0xf9a8d4),
-        "pink_400" => Some(0xf472b6),
-        "pink_500" => Some(0xec4899),
-        "pink_600" => Some(0xdb2777),
-        "pink_700" => Some(0xbe185d),
-        "pink_800" => Some(0x9d174d),
-        "pink_900" => Some(0x831843),
-        "pink_950" => Some(0x500724),
-        // purple
-        "purple_50" => Some(0xfaf5ff),
-        "purple_100" => Some(0xf3e8ff),
-        "purple_200" => Some(0xe9d5ff),
-        "purple_300" => Some(0xd8b4fe),
-        "purple_400" => Some(0xc084fc),
-        "purple_500" => Some(0xa855f7),
-        "purple_600" => Some(0x9333ea),
-        "purple_700" => Some(0x7e22ce),
-        "purple_800" => Some(0x6b21a8),
-        "purple_900" => Some(0x581c87),
-        "purple_950" => Some(0x3b0764),
-        // red
-        "red_50" => Some(0xfef2f2),
-        "red_100" => Some(0xfee2e2),
-        "red_200" => Some(0xfecaca),
-        "red_300" => Some(0xfca5a5),
-        "red_400" => Some(0xf87171),
-        "red_500" => Some(0xef4444),
-        "red_600" => Some(0xdc2626),
-        "red_700" => Some(0xb91c1c),
-        "red_800" => Some(0x991b1b),
-        "red_900" => Some(0x7f1d1d),
-        "red_950" => Some(0x450a0a),
-        // rose
-        "rose_50" => Some(0xfff1f2),
-        "rose_100" => Some(0xffe4e6),
-        "rose_200" => Some(0xfecdd3),
-        "rose_300" => Some(0xfda4af),
-        "rose_400" => Some(0xfb7185),
-        "rose_500" => Some(0xf43f5e),
-        "rose_600" => Some(0xe11d48),
-        "rose_700" => Some(0xbe123c),
-        "rose_800" => Some(0x9f1239),
-        "rose_900" => Some(0x881337),
-        "rose_950" => Some(0x4c0519),
-        // sky
-        "sky_50" => Some(0xf0f9ff),
-        "sky_100" => Some(0xe0f2fe),
-        "sky_200" => Some(0xbae6fd),
-        "sky_300" => Some(0x7dd3fc),
-        "sky_400" => Some(0x38bdf8),
-        "sky_500" => Some(0x0ea5e9),
-        "sky_600" => Some(0x0284c7),
-        "sky_700" => Some(0x0369a1),
-        "sky_800" => Some(0x075985),
-        "sky_900" => Some(0x0c4a6e),
-        "sky_950" => Some(0x082f49),
-        // slate
-        "slate_50" => Some(0xf8fafc),
-        "slate_100" => Some(0xf1f5f9),
-        "slate_200" => Some(0xe2e8f0),
-        "slate_300" => Some(0xcbd5e1),
-        "slate_400" => Some(0x94a3b8),
-        "slate_500" => Some(0x64748b),
-        "slate_600" => Some(0x475569),
-        "slate_700" => Some(0x334155),
-        "slate_800" => Some(0x1e293b),
-        "slate_900" => Some(0x0f172a),
-        "slate_950" => Some(0x020617),
         // stone
         "stone_50" => Some(0xfafaf9),
         "stone_100" => Some(0xf5f5f4),
         "stone_200" => Some(0xe7e5e4),
         "stone_300" => Some(0xd6d3d1),
-        "stone_400" => Some(0xa8a29e),
-        "stone_500" => Some(0x78716c),
-        "stone_600" => Some(0x57534e),
-        "stone_700" => Some(0x44403c),
+        "stone_400" => Some(0xa6a09b),
+        "stone_500" => Some(0x79716b),
+        "stone_600" => Some(0x57534d),
+        "stone_700" => Some(0x44403b),
         "stone_800" => Some(0x292524),
         "stone_900" => Some(0x1c1917),
         "stone_950" => Some(0x0c0a09),
-        // teal
-        "teal_50" => Some(0xf0fdfa),
-        "teal_100" => Some(0xccfbf1),
-        "teal_200" => Some(0x99f6e4),
-        "teal_300" => Some(0x5eead4),
-        "teal_400" => Some(0x2dd4bf),
-        "teal_500" => Some(0x14b8a6),
-        "teal_600" => Some(0x0d9488),
-        "teal_700" => Some(0x0f766e),
-        "teal_800" => Some(0x115e59),
-        "teal_900" => Some(0x134e4a),
-        "teal_950" => Some(0x042f2e),
-        // violet
-        "violet_50" => Some(0xf5f3ff),
-        "violet_100" => Some(0xede9fe),
-        "violet_200" => Some(0xddd6fe),
-        "violet_300" => Some(0xc4b5fd),
-        "violet_400" => Some(0xa78bfa),
-        "violet_500" => Some(0x8b5cf6),
-        "violet_600" => Some(0x7c3aed),
-        "violet_700" => Some(0x6d28d9),
-        "violet_800" => Some(0x5b21b6),
-        "violet_900" => Some(0x4c1d95),
-        "violet_950" => Some(0x2e1065),
-        // yellow
-        "yellow_50" => Some(0xfefce8),
-        "yellow_100" => Some(0xfef9c3),
-        "yellow_200" => Some(0xfef08a),
-        "yellow_300" => Some(0xfde047),
-        "yellow_400" => Some(0xfacc15),
-        "yellow_500" => Some(0xeab308),
-        "yellow_600" => Some(0xca8a04),
-        "yellow_700" => Some(0xa16207),
-        "yellow_800" => Some(0x854d0e),
-        "yellow_900" => Some(0x713f12),
-        "yellow_950" => Some(0x422006),
-        // zinc
-        "zinc_50" => Some(0xfafafa),
-        "zinc_100" => Some(0xf4f4f5),
-        "zinc_200" => Some(0xe4e4e7),
-        "zinc_300" => Some(0xd4d4d8),
-        "zinc_400" => Some(0xa1a1aa),
-        "zinc_500" => Some(0x71717a),
-        "zinc_600" => Some(0x52525b),
-        "zinc_700" => Some(0x3f3f46),
-        "zinc_800" => Some(0x27272a),
-        "zinc_900" => Some(0x18181b),
-        "zinc_950" => Some(0x09090b),
+        // mauve
+        "mauve_50" => Some(0xfafafa),
+        "mauve_100" => Some(0xf3f1f3),
+        "mauve_200" => Some(0xe7e4e7),
+        "mauve_300" => Some(0xd7d0d7),
+        "mauve_400" => Some(0xa89ea9),
+        "mauve_500" => Some(0x79697b),
+        "mauve_600" => Some(0x594c5b),
+        "mauve_700" => Some(0x463947),
+        "mauve_800" => Some(0x2a212c),
+        "mauve_900" => Some(0x1d161e),
+        "mauve_950" => Some(0x0c090c),
+        // olive
+        "olive_50" => Some(0xfbfbf9),
+        "olive_100" => Some(0xf4f4f0),
+        "olive_200" => Some(0xe8e8e3),
+        "olive_300" => Some(0xd8d8d0),
+        "olive_400" => Some(0xabab9c),
+        "olive_500" => Some(0x7c7c67),
+        "olive_600" => Some(0x5b5b4b),
+        "olive_700" => Some(0x474739),
+        "olive_800" => Some(0x2b2b22),
+        "olive_900" => Some(0x1d1d16),
+        "olive_950" => Some(0x0c0c09),
+        // mist
+        "mist_50" => Some(0xf9fbfb),
+        "mist_100" => Some(0xf1f3f3),
+        "mist_200" => Some(0xe3e7e8),
+        "mist_300" => Some(0xd0d6d8),
+        "mist_400" => Some(0x9ca8ab),
+        "mist_500" => Some(0x67787c),
+        "mist_600" => Some(0x4b585b),
+        "mist_700" => Some(0x394447),
+        "mist_800" => Some(0x22292b),
+        "mist_900" => Some(0x161b1d),
+        "mist_950" => Some(0x090b0c),
+        // taupe
+        "taupe_50" => Some(0xfbfaf9),
+        "taupe_100" => Some(0xf3f1f1),
+        "taupe_200" => Some(0xe8e4e3),
+        "taupe_300" => Some(0xd8d2d0),
+        "taupe_400" => Some(0xaba09c),
+        "taupe_500" => Some(0x7c6d67),
+        "taupe_600" => Some(0x5b4f4b),
+        "taupe_700" => Some(0x473c39),
+        "taupe_800" => Some(0x2b2422),
+        "taupe_900" => Some(0x1d1816),
+        "taupe_950" => Some(0x0c0a09),
         // black & white
         "black" => Some(0x000000),
         "white" => Some(0xffffff),
@@ -542,9 +591,15 @@ fn method_properties(method: &str) -> MethodProperties {
 
 /// Check if a static class will call `StatefulInteractiveElement` methods.
 pub(crate) fn is_stateful_class(class: &str) -> bool {
+    let class = class.rsplit(':').next().unwrap_or(class);
     matches!(
         class,
-        "overflow-scroll" | "overflow-x-scroll" | "overflow-y-scroll"
+        "overflow-scroll"
+            | "overflow-x-scroll"
+            | "overflow-y-scroll"
+            | "overflow-auto"
+            | "overflow-x-auto"
+            | "overflow-y-auto"
     )
 }
 
@@ -587,12 +642,14 @@ pub(crate) fn lookup_spacing_method(prefix: &str) -> Option<&'static str> {
     }
 }
 
-/// Complete Tailwind color family list (22 total), shared between runtime.rs and unit tests.
+/// Complete Tailwind v4.2 color family list (26 total), shared between runtime.rs and unit tests.
 ///
 /// Single source of truth: modifying here synchronously affects both dynamic class runtime matching tables and color coverage tests.
 pub(crate) const COLOR_FAMILIES: &[&str] = &[
-    "amber", "blue", "cyan", "emerald", "fuchsia", "gray", "green", "indigo", "lime", "neutral",
-    "orange", "pink", "purple", "red", "rose", "sky", "slate", "stone", "teal", "violet", "yellow",
+    "amber", "blue", "cyan", "emerald", "fuchsia", "gray", "green", "indigo", "lime", "mauve", "mist",
+    "neutral", "olive",
+    "orange", "pink", "purple", "red", "rose", "sky", "slate", "stone", "taupe", "teal", "violet",
+    "yellow",
     "zinc",
 ];
 
@@ -654,6 +711,19 @@ pub(crate) const LENGTH_CLASS_SPECS: &[LengthClassSpec] = &[
     LengthClassSpec::spacing("gap-x-", "gap_x"),
     LengthClassSpec::spacing("gap-y-", "gap_y"),
     LengthClassSpec::sizing("size-", "size"),
+    LengthClassSpec::sizing("basis-", "flex_basis"),
+    LengthClassSpec::spacing("space-x-", "gap_x"),
+    LengthClassSpec::spacing("space-y-", "gap_y"),
+    LengthClassSpec::spacing("pbs-", "pt"),
+    LengthClassSpec::spacing("pbe-", "pb"),
+    LengthClassSpec::spacing("mbs-", "mt"),
+    LengthClassSpec::spacing("mbe-", "mb"),
+    LengthClassSpec::spacing("ps-", "pl"),
+    LengthClassSpec::spacing("pe-", "pr"),
+    LengthClassSpec::spacing("ms-", "ml"),
+    LengthClassSpec::spacing("me-", "mr"),
+    LengthClassSpec::spacing("start-", "left"),
+    LengthClassSpec::spacing("end-", "right"),
     LengthClassSpec::spacing("gap-", "gap"),
     LengthClassSpec::spacing("px-", "px"),
     LengthClassSpec::spacing("py-", "py"),
@@ -1003,6 +1073,125 @@ pub(crate) const COMMON_CLASS_SUPPORT: &[CommonClassSupport] = &[
     CommonClassSupport::both("row-end-auto"),
 ];
 
+/// Tailwind utilities GPUI has no equivalent for yet, with what to do instead. A name
+/// ending in `-` matches as a prefix.
+const UNSUPPORTED_TAILWIND: &[(&[&str], &str)] = &[
+    (
+        &["transition", "transition-", "duration-", "ease-", "delay-", "animate-"],
+        "GPUI has no CSS transitions or animations; animate with `.with_animation(..)`.",
+    ),
+    (
+        &[
+            "blur", "blur-", "brightness-", "contrast-", "grayscale", "grayscale-", "hue-rotate-",
+            "invert", "invert-", "saturate-", "sepia", "sepia-", "drop-shadow", "drop-shadow-",
+            "backdrop-", "filter", "filter-",
+        ],
+        "GPUI has no filters or backdrop effects.",
+    ),
+    (
+        &[
+            "rotate-", "scale-", "skew-", "translate-z-", "transform", "transform-", "origin-",
+            "perspective-", "backface-",
+        ],
+        "GPUI can't transform elements (`translate-x/y-*` map to `left`/`top`); `svg` and \
+         `img` have `with_transformation(..)`.",
+    ),
+    (&["divide-"], "Put `border-t` (or `border-l`) on the children instead."),
+    (&["outline", "outline-"], "GPUI has no outlines; use `ring-*`."),
+    (&["text-shadow-"], "GPUI has no text shadows."),
+    (&["tracking-"], "GPUI has no letter spacing."),
+    (
+        &["uppercase", "lowercase", "capitalize", "normal-case"],
+        "GPUI has no text transform; change the string itself.",
+    ),
+    (
+        &[
+            "indent-", "align-", "underline-offset-", "list-", "columns-", "break-", "hyphens-",
+            "whitespace-pre", "whitespace-pre-line", "whitespace-pre-wrap",
+            "whitespace-break-spaces", "wrap-", "text-wrap", "text-balance", "text-pretty",
+            "text-justify", "text-start", "text-end",
+        ],
+        "GPUI's text layout has no such option.",
+    ),
+    (&["decoration-"], "Use GPUI's `text_decoration_*` attributes."),
+    (
+        &[
+            "select-", "pointer-events-", "resize", "resize-", "scroll-", "snap-", "touch-",
+            "will-change-", "appearance-", "accent-", "caret-", "fill-", "stroke-", "mix-blend-",
+            "bg-blend-", "bg-clip-", "bg-origin-", "bg-fixed", "bg-local", "bg-scroll",
+            "bg-repeat", "bg-no-repeat", "bg-repeat-", "bg-cover", "bg-contain", "bg-auto",
+            "bg-center", "bg-top", "bg-bottom", "bg-left", "bg-right", "bg-radial", "bg-radial-",
+            "bg-conic", "bg-conic-", "mask-", "isolate", "isolation-auto", "object-top",
+            "object-bottom", "object-left", "object-right", "object-center",
+        ],
+        "GPUI has no such style property.",
+    ),
+    (
+        &["z-"],
+        "GPUI paints in tree order and has no z-index; draw later siblings or `deferred(..)` on top.",
+    ),
+    (&["order-"], "GPUI has no `order`; reorder the children."),
+    (
+        &["fixed", "sticky", "static"],
+        "GPUI positions are only `relative` and `absolute`.",
+    ),
+    (
+        &[
+            "inline", "inline-block", "inline-flex", "inline-grid", "table", "table-",
+            "flow-root", "contents", "list-item", "float-", "clear-", "box-border",
+            "box-content", "box-decoration-", "sr-only", "not-sr-only", "container",
+        ],
+        "GPUI lays out with flex and grid only.",
+    ),
+    (
+        &[
+            "cursor-auto", "cursor-wait", "cursor-help", "cursor-progress", "cursor-cell",
+            "cursor-all-scroll", "cursor-zoom-in", "cursor-zoom-out", "cursor-none",
+        ],
+        "GPUI has no such cursor.",
+    ),
+    (
+        &[
+            "w-screen", "h-screen", "min-h-screen", "min-w-screen", "max-h-screen",
+            "max-w-screen", "w-dvw", "h-dvh", "w-svw", "h-svh", "w-lvw", "h-lvh", "w-min",
+            "w-max", "h-min", "h-max", "min-w-min", "min-w-max", "max-w-min", "max-w-max",
+            "min-h-min", "min-h-max", "max-w-prose",
+        ],
+        "GPUI has no viewport or content-based sizes; use `size-full` on the root or a length.",
+    ),
+];
+
+pub(crate) fn unsupported_tailwind_class(class: &str) -> Option<&'static str> {
+    let class = class.trim_start_matches(['-', '!']);
+    UNSUPPORTED_TAILWIND
+        .iter()
+        .find(|(names, _)| {
+            names.iter().any(|name| match name.strip_suffix('-') {
+                Some(_) => class.starts_with(name),
+                None => class == *name,
+            })
+        })
+        .map(|(_, reason)| *reason)
+}
+
+/// Tailwind variants GPUI has no state for yet.
+pub(crate) fn is_unsupported_tailwind_variant(variant: &str) -> bool {
+    const PREFIXES: &[&str] = &[
+        "group-", "peer-", "aria-", "data-", "supports-", "not-", "has-", "in-", "nth-", "@",
+    ];
+    const NAMES: &[&str] = &[
+        "disabled", "enabled", "focus-visible", "focus-within", "first", "last", "odd", "even",
+        "only", "empty", "visited", "target", "checked", "indeterminate", "default", "required",
+        "valid", "invalid", "user-valid", "user-invalid", "read-only", "open", "inert",
+        "placeholder", "before", "after", "file", "marker", "selection", "first-line",
+        "first-letter", "backdrop", "starting", "motion-safe", "motion-reduce", "contrast-more",
+        "contrast-less", "forced-colors", "inverted-colors", "pointer-fine", "pointer-coarse",
+        "any-pointer-fine", "any-pointer-coarse", "portrait", "landscape", "print", "noscript",
+        "rtl", "ltr", "*", "**",
+    ];
+    NAMES.contains(&variant) || PREFIXES.iter().any(|prefix| variant.starts_with(prefix))
+}
+
 pub(crate) fn is_supported_common_no_arg_class(class: &str) -> bool {
     COMMON_CLASS_SUPPORT
         .iter()
@@ -1091,13 +1280,13 @@ mod tests {
 
     #[test]
     fn color_table_spot_check_values() {
-        // Spot-check key color values to prevent copy-paste errors
-        assert_eq!(lookup_color("red_500"), Some(0xef4444));
-        assert_eq!(lookup_color("blue_500"), Some(0x3b82f6));
-        assert_eq!(lookup_color("green_500"), Some(0x22c55e));
-        assert_eq!(lookup_color("gray_500"), Some(0x6b7280));
-        assert_eq!(lookup_color("amber_500"), Some(0xf59e0b));
-        assert_eq!(lookup_color("purple_500"), Some(0xa855f7));
+        // Spot-check Tailwind v4 sRGB values to catch conversion errors
+        assert_eq!(lookup_color("red_500"), Some(0xfb2c36));
+        assert_eq!(lookup_color("blue_500"), Some(0x2b7fff));
+        assert_eq!(lookup_color("green_500"), Some(0x00c950));
+        assert_eq!(lookup_color("gray_500"), Some(0x6a7282));
+        assert_eq!(lookup_color("amber_500"), Some(0xfe9a00));
+        assert_eq!(lookup_color("purple_500"), Some(0xad46ff));
     }
 
     #[test]
@@ -1481,6 +1670,19 @@ mod tests {
         assert!(!is_valid_text_size("huge"));
         assert!(!is_valid_text_size("10xl"));
         assert!(!is_valid_text_size(""));
+    }
+
+    #[test]
+    fn unsupported_tailwind_is_told_apart_from_typos() {
+        for class in ["transition", "transition-all", "z-10", "-rotate-3", "uppercase", "w-screen"] {
+            assert!(unsupported_tailwind_class(class).is_some(), "{class}");
+        }
+        for class in ["flex-cols", "transitions", "zz-10", "bg-reed-500"] {
+            assert!(unsupported_tailwind_class(class).is_none(), "{class}");
+        }
+        assert!(is_unsupported_tailwind_variant("disabled"));
+        assert!(is_unsupported_tailwind_variant("data-active"));
+        assert!(!is_unsupported_tailwind_variant("hovr"));
     }
 }
 

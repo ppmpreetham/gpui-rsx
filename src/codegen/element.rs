@@ -15,11 +15,12 @@
 //! - Automatic IDs are based on source code span positions (line + column), remaining stable under incremental compilation
 
 use super::attribute::{AttrHints, generate_attr_methods_with_mode, static_class_expr_needs_id};
-use super::class::{ClassMode, parse_class_string_with_mode};
+use super::class::{ClassMode, chain, parse_class_string_with_mode};
 use super::tables::{
     is_stateful_attr, is_stateful_class, lookup_attr_flag_method, lookup_tag_default,
 };
 use crate::diagnostics::{for_loop_missing_key_error, missing_required_attribute_error};
+
 
 #[derive(Default)]
 struct AttrAnalysis {
@@ -146,10 +147,7 @@ pub(crate) fn generate_node_checked(
         RsxNode::Element(elem) => {
             let mut expr = generate_element_checked(elem, require_loop_key, mode)?;
             if !inherited_classes.is_empty() {
-                let methods: Vec<_> = inherited_classes.iter()
-                    .map(|cls| crate::codegen::class::parse_single_class_with_mode(cls, mode))
-                    .collect();
-                expr = quote::quote! { #expr #(#methods)* };
+                expr = chain(expr, parse_class_string_with_mode(&inherited_classes.join(" "), mode));
             }
             Ok(expr)
         }
@@ -212,36 +210,19 @@ fn generate_element_checked(
     // Cache tag name string to avoid multiple to_string() heap allocations
     let tag_str = element.name.to_string();
 
-    // Fast path: when there are no attributes and no children, skip all scans and return the base tag directly
-    if element.attributes.is_empty() && element.children.is_empty() {
-        if tag_str.chars().next().is_some_and(|c| c.is_ascii_uppercase()) && !["Resizable", "ResizablePanel", "Sidebar", "SidebarHeader", "SidebarFooter", "SidebarMenu", "SidebarGroup", "SidebarMenuItem", "SidebarToggleButton", "TitleBar", "Tab", "DataTable", "DropdownButton"].contains(&tag_str.as_str()) {
-            return generate_component_call(&element.name, &[], &[], &[]);
-        }
-        return generate_tag(&tag_str, &element.name, None, None, None, None);
-    }
-
+    // One rule for capitalized tags: each is a zopra component (`base={..}` opts out).
+    // `<DataTable>` is the exception: its `<Col>`s generate typed cell and sort code.
     let has_base = element
         .attributes
         .iter()
         .any(|attr| matches!(attr, RsxAttribute::Value { name, .. } if name == "base"));
-    if tag_str.chars().next().is_some_and(|c| c.is_ascii_uppercase()) && !has_base && !["Resizable", "ResizablePanel", "Sidebar", "SidebarHeader", "SidebarFooter", "SidebarMenu", "SidebarGroup", "SidebarMenuItem", "SidebarToggleButton", "TitleBar", "Tab", "DataTable", "DropdownButton"].contains(&tag_str.as_str()) {
-        let attr_pairs: Vec<(&syn::Ident, &syn::Expr)> = element
-            .attributes
-            .iter()
-            .filter_map(|attr| match attr {
-                RsxAttribute::Value { name, value } => Some((name, value)),
-                _ => None,
-            })
-            .collect();
-        let flags: Vec<&syn::Ident> = element
-            .attributes
-            .iter()
-            .filter_map(|attr| match attr {
-                RsxAttribute::Flag(name) => Some(name),
-                _ => None,
-            })
-            .collect();
-        return generate_component_call(&element.name, &attr_pairs, &flags, &element.children);
+    if tag_str.starts_with(|c: char| c.is_ascii_uppercase()) && tag_str != "DataTable" && !has_base {
+        return generate_component_call(element, mode);
+    }
+
+    // Fast path: when there are no attributes and no children, skip all scans and return the base tag directly
+    if element.attributes.is_empty() && element.children.is_empty() {
+        return generate_tag(&tag_str, &element.name, None, None, None, None);
     }
 
     // Single pass to extract all needed information while generating user attribute methods.
@@ -253,13 +234,9 @@ fn generate_element_checked(
     let mut icon_name = None;
     let mut kbd_keys = None;
     let mut table_state = None;
-    let mut resizable_vertical = false;
-    let mut resizable_state = None;
-    let mut sidebar_label = None;
     let mut canvas_prepaint = None;
     let mut canvas_paint = None;
     let mut has_styled = false;
-    let is_component = tag_str.chars().next().map_or(false, |c| c.is_ascii_uppercase()) && !["Resizable", "ResizablePanel", "Sidebar", "SidebarHeader", "SidebarFooter", "SidebarMenu", "SidebarGroup", "SidebarMenuItem", "SidebarToggleButton", "TitleBar", "Tab", "DataTable", "DropdownButton"].contains(&tag_str.as_str());
     let mut needs_id = false;
     let mut inherited_classes = Vec::new();
 
@@ -286,17 +263,6 @@ fn generate_element_checked(
             RsxAttribute::Value { name, value } if tag_str == "DataTable" && name == "state" => {
                 table_state = Some(value);
             }
-            RsxAttribute::Value { name, value } if tag_str == "Resizable" && name == "state" => {
-                resizable_state = Some(value);
-            }
-            RsxAttribute::Value { name, value } if (tag_str == "SidebarGroup" || tag_str == "SidebarMenuItem") && name == "label" => {
-                sidebar_label = Some(value);
-            }
-            RsxAttribute::Flag(name) if tag_str == "Resizable" && (name == "vertical" || name == "horizontal") => {
-                if name == "vertical" {
-                    resizable_vertical = true;
-                }
-            }
             RsxAttribute::Value { name, value } if name == "base" => {
                 base_expr = Some(value);
             }
@@ -315,17 +281,6 @@ fn generate_element_checked(
             }
             RsxAttribute::Value { name, value } if tag_str == "canvas" && name == "paint" => {
                 canvas_paint = Some(value);
-            }
-            RsxAttribute::Value { name, value } if tag_str == "Activity" && name == "mode" => {
-                methods.push(quote! {
-                    .map(|__el| {
-                        if #value == "visible" {
-                            __el.visible()
-                        } else {
-                            __el.invisible()
-                        }
-                    })
-                });
             }
             RsxAttribute::Value { name, value } if tag_str == "svg" && name == "src" => {
                 methods.push(quote! { .path(#value) });
@@ -386,7 +341,7 @@ fn generate_element_checked(
                     }
                 }
                 let analysis = analyze_attr(attr);
-                if !needs_id && analysis.needs_id && !is_component {
+                if analysis.needs_id {
                     needs_id = true;
                 }
                 generate_attr_methods_with_mode(attr, analysis.hints(), &mut methods, mode);
@@ -403,92 +358,12 @@ fn generate_element_checked(
     //  2. Needs id + key exists    → Auto-ID prefix + key (concatenated at runtime, ensures uniqueness in loops)
     //  3. Needs id, no key         → Auto-ID based purely on source location
     //  4. Does not need id         → Do not inject (key is silently ignored in this case)
-    let tag = if tag_str == "Resizable" {
-        let res_id = if let Some(id_value) = user_id {
-            quote! { #id_value }
-        } else if let Some(key_expr) = user_key {
-            make_keyed_auto_id(&element.name, key_expr)
-        } else {
-            make_auto_id(&element.name)
-        };
-        needs_id = false;
-        user_id = None;
-        user_key = None;
-
-        let constructor = if resizable_vertical {
-            quote! { gpui_kit::component::resizable::v_resizable }
-        } else {
-            quote! { gpui_kit::component::resizable::h_resizable }
-        };
-
-        if let Some(state) = resizable_state {
-            quote! { #constructor(#res_id).with_state(#state) }
-        } else {
-            quote! { #constructor(#res_id) }
-        }
-    } else if tag_str == "nav" {
-        let res_id = if let Some(id_value) = user_id {
-            quote! { #id_value }
-        } else if let Some(key_expr) = user_key {
-            make_keyed_auto_id(&element.name, key_expr)
-        } else {
-            make_auto_id(&element.name)
-        };
-        needs_id = false;
-        user_id = None;
-        user_key = None;
-        quote! { gpui_kit::component::tab::TabBar::new(#res_id) }
-    } else if tag_str == "Tab" {
-        needs_id = false;
-        quote! { gpui_kit::component::tab::Tab::new() }
-    } else if tag_str == "DataTable" {
+    let tag = if tag_str == "DataTable" {
         let Some(state) = table_state else {
             return crate::codegen::data_table_parser::parse_data_table(element);
         };
         needs_id = false;
         quote! { gpui_kit::component::table::DataTable::new(#state) }
-    } else if tag_str == "TitleBar" {
-        quote! { gpui_kit::component::TitleBar::new() }
-    } else if tag_str == "Sidebar" {
-        let res_id = if let Some(id_value) = user_id {
-            quote! { #id_value }
-        } else if let Some(key_expr) = user_key {
-            make_keyed_auto_id(&element.name, key_expr)
-        } else {
-            make_auto_id(&element.name)
-        };
-        needs_id = false;
-        user_id = None;
-        user_key = None;
-        quote! { gpui_kit::component::sidebar::Sidebar::new(#res_id) }
-    } else if tag_str == "SidebarHeader" {
-        needs_id = false;
-        quote! { gpui_kit::component::sidebar::SidebarHeader::new() }
-    } else if tag_str == "SidebarFooter" {
-        needs_id = false;
-        quote! { gpui_kit::component::sidebar::SidebarFooter::new() }
-    } else if tag_str == "SidebarMenu" {
-        needs_id = false;
-        quote! { gpui_kit::component::sidebar::SidebarMenu::new() }
-    } else if tag_str == "SidebarGroup" {
-        needs_id = false;
-        if let Some(lbl) = sidebar_label {
-            quote! { gpui_kit::component::sidebar::SidebarGroup::new(#lbl) }
-        } else {
-            quote! { gpui_kit::component::sidebar::SidebarGroup::new("unknown") }
-        }
-    } else if tag_str == "SidebarMenuItem" {
-        needs_id = false;
-        if let Some(lbl) = sidebar_label {
-            quote! { gpui_kit::component::sidebar::SidebarMenuItem::new(#lbl) }
-        } else {
-            quote! { gpui_kit::component::sidebar::SidebarMenuItem::new("unknown") }
-        }
-    } else if tag_str == "SidebarToggleButton" {
-        needs_id = false;
-        quote! { gpui_kit::component::sidebar::SidebarToggleButton::new() }
-    } else if tag_str == "ResizablePanel" {
-        quote! { gpui_kit::component::resizable::resizable_panel() }
     } else if tag_str == "kbd" {
         if let Some(keys) = kbd_keys {
             quote! { gpui_kit::component::kbd::Kbd::new(gpui_kit::Keystroke::parse(#keys).unwrap()) }
@@ -511,7 +386,7 @@ fn generate_element_checked(
         quote! { gpui_kit::component::table::TableCell::new() }
     } else if tag_str == "caption" || tag_str == "table_caption" {
         quote! { gpui_kit::component::table::TableCaption::new() }
-    } else if tag_str == "button" || tag_str == "button_group" || tag_str == "DropdownButton" {
+    } else if tag_str == "button" || tag_str == "button_group" {
         let btn_id = if let Some(id_value) = user_id {
             quote! { #id_value }
         } else if let Some(key_expr) = user_key {
@@ -524,10 +399,8 @@ fn generate_element_checked(
         user_key = None;
         if tag_str == "button" {
             quote! { gpui_kit::component::button::Button::new(#btn_id) }
-        } else if tag_str == "button_group" {
-            quote! { gpui_kit::component::button::ButtonGroup::new(#btn_id) }
         } else {
-            quote! { gpui_kit::component::button::DropdownButton::new(#btn_id) }
+            quote! { gpui_kit::component::button::ButtonGroup::new(#btn_id) }
         }
     } else if let Some(base) = base_expr {
         quote! { #base }
@@ -569,24 +442,10 @@ fn generate_element_checked(
             Vec::new()
         };
 
-    if tag_str == "Resizable" {
-        for child in &element.children {
-            if let crate::parser::RsxNode::Element(child_elem) = child {
-                let child_name = child_elem.name.to_string();
-                if child_name != "ResizablePanel" {
-                    return Err(syn::Error::new_spanned(
-                        &child_elem.name,
-                        format!("`<Resizable>` can only contain `<ResizablePanel>` children, but found `<{}>`", child_name)
-                    ).into_compile_error());
-                }
-            }
-        }
-    }
-
     // Child nodes → .child() / .children() calls (including aggregation optimization)
     generate_children_methods(&element.children, require_loop_key, &mut methods, mode, &inherited_classes)?;
 
-    Ok(quote! { #base #(#default_methods)* #(#methods)* })
+    Ok(chain(base, default_methods.into_iter().chain(methods)))
 }
 
 /// Generates method-chaining fragments for child nodes.
@@ -622,77 +481,68 @@ fn generate_children_methods(
     Ok(())
 }
 
-/// HTML tag → `div()`, special tag → function of the same name, custom component → function call of the same name
-///
-/// Accepts pre-cached `tag_str` to avoid repeated `to_string()` calls
-fn generate_component_call(
-    name: &RsxElementName,
-    attrs: &[(&syn::Ident, &syn::Expr)],
-    flags: &[&syn::Ident],
-    children: &[RsxNode],
-) -> CodegenResult {
-    if name.as_single_ident().is_none() {
+/// A capitalized tag is a zopra component: attributes become prop setters, a bare flag sets
+/// `true`, `class` compiles to a style, and the content between the tags becomes `children`.
+fn generate_component_call(element: &RsxElement, mode: ClassMode) -> CodegenResult {
+    let name = &element.name;
+    let Some(props_ident) = name.as_single_ident() else {
         return Err(syn::Error::new(
             name.span(),
-            "component tags with paths (e.g. `<ui::TaskCard />`) are not supported yet; use a single-identifier tag",
-        )
-        .to_compile_error());
-    }
-
-    let props_ident = name.as_single_ident().unwrap().clone();
-
-    let mut setters = TokenStream::new();
-    for (attr_name, expr) in attrs {
-        setters.extend(quote! { .#attr_name(#expr) });
-    }
-    for flag in flags {
-        setters.extend(quote! { .#flag() });
-    }
-
-    let children_setter = if children.is_empty() {
-        TokenStream::new()
-    } else {
-        let _ = children;
-        return Err(syn::Error::new(
-            name.span(),
-            format!(
-                "component tag `<{}>` cannot take children: zopra component props are attributes only.\\n\
-                 \x20 help: pass the content as a prop instead, or wrap the tag: `<div><{} /></div>`",
-                name, name
-            ),
+            "component tags with paths (e.g. `<ui::TaskCard />`) are not supported yet; import the component and use its name",
         )
         .to_compile_error());
     };
 
-    if let Some(ident) = name.as_single_ident() {
-        let raw = ident.to_string();
-        let first = raw.chars().next().unwrap_or('a');
-        if first.is_ascii_lowercase() && !attrs.is_empty() {
-            let capitalized: String = raw
-                .split('_')
-                .map(|part| {
-                    let mut chars = part.chars();
-                    match chars.next() {
-                        Some(c) => c.to_uppercase().collect::<String>() + chars.as_str(),
-                        None => String::new(),
-                    }
-                })
-                .collect();
-            return Err(syn::Error::new(
-                name.span(),
-                format!(
-                    "tag `<{raw}>` was treated as a plain element, so `{raw}()` was called without arguments.\\n\
-                     \x20 help: component tags must be capitalized: did you mean `<{capitalized} ... />`?"
-                ),
-            )
-            .to_compile_error());
+    let mut setters = TokenStream::new();
+    for attr in &element.attributes {
+        match attr {
+            RsxAttribute::Value { name, value } if name == "class" => {
+                let style = compile_style(value, mode)?;
+                setters.extend(quote! { .class(#style) });
+            }
+            RsxAttribute::Value { name, value } => setters.extend(quote! { .#name(#value) }),
+            RsxAttribute::Flag(flag) => setters.extend(quote! { .#flag(true) }),
+            _ => {
+                return Err(syn::Error::new(
+                    name.span(),
+                    format!("`<{name}>` is a component; `when`, `whenSome` and state classes only work on built-in tags like `<div>`"),
+                )
+                .to_compile_error());
+            }
         }
+    }
+
+    // the content renders when the component places `{children}`, inside its own render
+    if !element.children.is_empty() {
+        let mut pushes = Vec::with_capacity(element.children.len());
+        for node in &element.children {
+            pushes.push(match node {
+                RsxNode::Spread(expr) => {
+                    quote! { __children.extend(::std::iter::IntoIterator::into_iter(#expr).map(zopra::FromChild::from_child)); }
+                }
+                RsxNode::For { binding, iter, body } => {
+                    let items = generate_for_loop_checked(binding, iter, body, mode, &[])?;
+                    quote! { __children.extend((#items).map(zopra::FromChild::from_child)); }
+                }
+                node => {
+                    let child = generate_node_checked(node, false, mode, &[])?;
+                    quote! { __children.push(zopra::FromChild::from_child(#child)); }
+                }
+            });
+        }
+        setters.extend(quote! {
+            .children(|#[allow(unused_variables)] window: &mut gpui_kit::Window, #[allow(unused_variables)] cx: &mut gpui_kit::App| {
+                let mut __children = ::std::vec::Vec::new();
+                #(#pushes)*
+                __children
+            })
+        });
     }
 
     let loc = name.span().start();
     let (line, column) = (loc.line as u64, loc.column as u64);
     Ok(quote! {
-        #props_ident::new() #setters #children_setter .render_at(
+        #props_ident::new() #setters .render_at(
             gpui_kit::ElementId::NamedInteger(
                 concat!(file!(), "::__zopra_tag_").into(),
                 #line * 10_000 + #column,
@@ -701,6 +551,24 @@ fn generate_component_call(
             cx,
         )
     })
+}
+
+/// `class` on a component: the classes are compiled onto a throwaway `div`, whose style is
+/// handed over, so a component's class costs the same as one on a built-in tag.
+fn compile_style(class: &syn::Expr, mode: ClassMode) -> CodegenResult {
+    let carrier = RsxElement {
+        name: RsxElementName { path: syn::parse_quote!(div) },
+        attributes: vec![RsxAttribute::Value {
+            name: syn::Ident::new("class", proc_macro2::Span::call_site()),
+            value: class.clone(),
+        }],
+        children: Vec::new(),
+    };
+    let carrier = generate_element_checked(&carrier, false, mode)?;
+    Ok(quote! {{
+        let mut __carrier = #carrier;
+        ::std::mem::take(gpui_kit::Styled::style(&mut __carrier))
+    }})
 }
 
 fn generate_tag(
@@ -763,7 +631,7 @@ fn generate_tag(
         // HTML tags: uniformly mapped to div()
         "div" | "span" | "section" | "article" | "header" | "footer" | "main" | "nav" | "aside"
         | "h1" | "h2" | "h3" | "h4" | "h5" | "h6" | "p" | "label" | "a" | "input"
-        | "textarea" | "select" | "form" | "ul" | "ol" | "li" | "kbd" | "Activity" => {
+        | "textarea" | "select" | "form" | "ul" | "ol" | "li" | "kbd" => {
             quote! { gpui_kit::div() }
         }
         _ => quote! { #path() },
@@ -841,4 +709,7 @@ mod tests {
     }
 
 }
+
+
+
 
