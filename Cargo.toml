@@ -1,6 +1,6 @@
 [package]
 name = "zopra-gpui-view"
-version = "0.1.115"
+version = "0.1.2"
 edition = "2024"
 rust-version = "1.88"
 description = "A JSX-like macro for GPUI - simplify UI development with HTML-like syntax"
@@ -32,7 +32,7 @@ proc-macro2 = { version = "1.0.106", features = ["span-locations"] }
 criterion = { version = "0.8.2", features = ["html_reports"] }
 trybuild = "1.0.116"
 # for the zopra-style component-tag mock expansion (render_at(window, cx))
-gpui-kit = "0.7"
+gpui-kit = "0.8"
 
 [[bench]]
 name = "class_performance"
